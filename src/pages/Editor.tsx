@@ -20,6 +20,7 @@ import { cn } from "../lib/cn";
 import { countWords } from "../lib/format";
 import type {
   BlogPost,
+  BlogPostQualityImprovePayload,
   BlogPostQualityReviewPayload,
   BlogPostRevisionPayload,
   BlogPostStatus,
@@ -90,6 +91,15 @@ export default function Editor() {
   const [preserveTags, setPreserveTags] = useState(true);
   const [markReviewReadyAfterRevision, setMarkReviewReadyAfterRevision] = useState(true);
   const [revisionJobId, setRevisionJobId] = useState<number | null>(null);
+  const [improveJobId, setImproveJobId] = useState<number | null>(null);
+  const [maxRevisionRounds, setMaxRevisionRounds] = useState(2);
+  const [minimumHumanNaturalnessScore, setMinimumHumanNaturalnessScore] = useState(85);
+  const [minimumFactualGroundingScore, setMinimumFactualGroundingScore] = useState(85);
+  const [minimumReadabilityScore, setMinimumReadabilityScore] = useState(80);
+  const [minimumSeoReadinessScore, setMinimumSeoReadinessScore] = useState(70);
+  const [minimumMonetizationReadinessScore, setMinimumMonetizationReadinessScore] = useState(55);
+  const [requirePublishReady, setRequirePublishReady] = useState(false);
+  const [markReviewReadyWhenPassed, setMarkReviewReadyWhenPassed] = useState(true);
   const [commitMessage, setCommitMessage] = useState("");
   const [canonicalUrl, setCanonicalUrl] = useState("");
   const [includeCanonicalLink, setIncludeCanonicalLink] = useState(true);
@@ -157,6 +167,16 @@ export default function Editor() {
       return status === "PENDING" || status === "RUNNING" ? 2000 : false;
     },
   });
+  const improveJobQuery = useQuery({
+    queryKey: ["ai-job", improveJobId],
+    queryFn: () => api.job(improveJobId!),
+    enabled: improveJobId !== null,
+    retry: false,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === "PENDING" || status === "RUNNING" ? 2000 : false;
+    },
+  });
   useEffect(() => {
     const job = revisionJobQuery.data;
     if (!job || job.status !== "SUCCEEDED" || !job.resultBlogPostId) {
@@ -173,6 +193,22 @@ export default function Editor() {
         setRevisionJobId(null);
       });
   }, [queryClient, revisionJobQuery.data]);
+  useEffect(() => {
+    const job = improveJobQuery.data;
+    if (!job || job.status !== "SUCCEEDED" || !job.resultBlogPostId) {
+      return;
+    }
+
+    void queryClient
+      .fetchQuery({
+        queryKey: ["blog-post", job.resultBlogPostId],
+        queryFn: () => api.blogPost(job.resultBlogPostId!),
+      })
+      .then((updated) => {
+        refreshBlogPostCache(queryClient, job.resultBlogPostId, updated);
+        setImproveJobId(null);
+      });
+  }, [improveJobQuery.data, queryClient]);
   const statusMutation = useMutation({
     mutationFn: async (next: "review-ready" | "approve" | "publish") => {
       if (next === "review-ready") {
@@ -220,6 +256,9 @@ export default function Editor() {
   const isRevisionRunning =
     revisionJobQuery.data?.status === "PENDING" ||
     revisionJobQuery.data?.status === "RUNNING";
+  const isImproveRunning =
+    improveJobQuery.data?.status === "PENDING" ||
+    improveJobQuery.data?.status === "RUNNING";
   const canPublishGithub = blogPostId !== null && currentStatus === "APPROVED";
   const canExportVelog = blogPostId !== null && (currentStatus === "APPROVED" || currentStatus === "PUBLISHED");
 
@@ -287,6 +326,42 @@ export default function Editor() {
       })
       .catch(() => {
         setRevisionJobId(null);
+      });
+  };
+
+  const handleQualityImproveJob = () => {
+    if (blogPostId === null || isImproveRunning) {
+      return;
+    }
+
+    const payload: BlogPostQualityImprovePayload = {
+      reviewRequest: {
+        originalInputMemo: reviewMemo || null,
+        targetReader: targetReader || null,
+        monetizationGoal: monetizationGoal || null,
+      },
+      maxRevisionRounds,
+      minimumHumanNaturalnessScore,
+      minimumFactualGroundingScore,
+      minimumReadabilityScore,
+      minimumSeoReadinessScore,
+      minimumMonetizationReadinessScore,
+      additionalRevisionMemo: additionalMemo || null,
+      tone: revisionTone || null,
+      targetLength,
+      preserveTitle,
+      preserveTags,
+      requirePublishReady,
+      markReviewReadyWhenPassed,
+    };
+
+    api
+      .createQualityImproveJob(blogPostId, payload)
+      .then((job) => {
+        setImproveJobId(job.id);
+      })
+      .catch(() => {
+        setImproveJobId(null);
       });
   };
 
@@ -757,6 +832,82 @@ export default function Editor() {
                   {revisionJobQuery.data ? (
                     <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-600 dark:bg-zinc-900 dark:text-zinc-300">
                       Revision job: {revisionJobQuery.data.status.toLowerCase()}
+                    </p>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
+
+            {blogPostId ? (
+              <section className="mb-8 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-base font-bold text-gray-950 dark:text-white">Auto Quality Improve</h2>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+                      Let the server review, revise, and re-review until the configured quality criteria are met.
+                    </p>
+                  </div>
+                  <button
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={isImproveRunning}
+                    type="button"
+                    onClick={handleQualityImproveJob}
+                  >
+                    <RefreshCw className={cn(isImproveRunning && "animate-spin")} size={16} />
+                    {isImproveRunning ? "Improving" : "Auto Improve"}
+                  </button>
+                </div>
+
+                <div className="grid gap-3">
+                  <label className="space-y-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Max revision rounds</span>
+                    <input
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                      max={3}
+                      min={1}
+                      type="number"
+                      value={maxRevisionRounds}
+                      onChange={(event) => setMaxRevisionRounds(Number(event.target.value))}
+                    />
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-5">
+                    {[
+                      ["Human", minimumHumanNaturalnessScore, setMinimumHumanNaturalnessScore],
+                      ["Facts", minimumFactualGroundingScore, setMinimumFactualGroundingScore],
+                      ["Read", minimumReadabilityScore, setMinimumReadabilityScore],
+                      ["SEO", minimumSeoReadinessScore, setMinimumSeoReadinessScore],
+                      ["Money", minimumMonetizationReadinessScore, setMinimumMonetizationReadinessScore],
+                    ].map(([label, value, setter]) => (
+                      <label className="space-y-1" key={label as string}>
+                        <span className="text-xs font-bold text-gray-500 dark:text-zinc-500">{label as string}</span>
+                        <input
+                          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                          max={100}
+                          min={0}
+                          type="number"
+                          value={value as number}
+                          onChange={(event) => (setter as (next: number) => void)(Number(event.target.value))}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <div className="grid gap-2 text-sm text-gray-600 dark:text-zinc-400 sm:grid-cols-2">
+                    <label className="flex items-center gap-2">
+                      <input checked={requirePublishReady} type="checkbox" onChange={(event) => setRequirePublishReady(event.target.checked)} />
+                      Require publish ready
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        checked={markReviewReadyWhenPassed}
+                        type="checkbox"
+                        onChange={(event) => setMarkReviewReadyWhenPassed(event.target.checked)}
+                      />
+                      Mark review ready when passed
+                    </label>
+                  </div>
+                  {improveJobQuery.data ? (
+                    <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-600 dark:bg-zinc-900 dark:text-zinc-300">
+                      Quality improve job: {improveJobQuery.data.status.toLowerCase()}
                     </p>
                   ) : null}
                 </div>

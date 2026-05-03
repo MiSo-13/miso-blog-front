@@ -3,6 +3,7 @@ import type {
   AiJob,
   ApiResponse,
   BlogPost,
+  BlogPostQualityImprovePayload,
   BlogPostQualityReview,
   BlogPostQualityReviewPayload,
   BlogPostRevisionPayload,
@@ -53,6 +54,8 @@ export const api = {
     unwrap<BlogPostQualityReview>(http.post(`/api/blog-posts/${blogPostId}/quality-review/ai`, payload)),
   createRevisionJob: (blogPostId: number, payload: BlogPostRevisionPayload) =>
     unwrap<AiJob>(http.post(`/api/ai-jobs/blog-posts/${blogPostId}/revise/ai`, payload)),
+  createQualityImproveJob: (blogPostId: number, payload: BlogPostQualityImprovePayload) =>
+    unwrap<AiJob>(http.post(`/api/ai-jobs/blog-posts/${blogPostId}/quality-improve/ai`, payload)),
   markReviewReady: (blogPostId: number) =>
     unwrap<BlogPost>(http.post(`/api/blog-posts/${blogPostId}/review-ready`)),
   approveBlogPost: (blogPostId: number) =>

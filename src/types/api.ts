@@ -84,6 +84,23 @@ export type BlogPostRevisionPayload = {
   markReviewReady?: boolean | null;
 };
 
+export type BlogPostQualityImprovePayload = {
+  reviewRequest?: BlogPostQualityReviewPayload | null;
+  maxRevisionRounds?: number | null;
+  minimumHumanNaturalnessScore?: number | null;
+  minimumFactualGroundingScore?: number | null;
+  minimumReadabilityScore?: number | null;
+  minimumSeoReadinessScore?: number | null;
+  minimumMonetizationReadinessScore?: number | null;
+  additionalRevisionMemo?: string | null;
+  tone?: string | null;
+  targetLength?: "SHORT" | "MEDIUM" | "LONG" | null;
+  preserveTitle?: boolean | null;
+  preserveTags?: boolean | null;
+  requirePublishReady?: boolean | null;
+  markReviewReadyWhenPassed?: boolean | null;
+};
+
 export type PublishGithubPagesPayload = {
   targetId?: number | null;
   commitMessage?: string | null;
