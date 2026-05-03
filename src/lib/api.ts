@@ -48,7 +48,21 @@ import type {
   WriteBlogPostFromAnalysisPayload,
 } from "../types/api";
 
-export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8010";
+function resolveApiBaseUrl() {
+  const configuredBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
+
+  if (import.meta.env.PROD) {
+    const pointsToBrowserLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(configuredBaseUrl);
+
+    if (!configuredBaseUrl || pointsToBrowserLocalhost) {
+      return "/";
+    }
+  }
+
+  return configuredBaseUrl || "http://localhost:8010";
+}
+
+export const apiBaseUrl = resolveApiBaseUrl();
 
 export const http = axios.create({
   baseURL: apiBaseUrl,
