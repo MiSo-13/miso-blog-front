@@ -1,11 +1,14 @@
 import { Bell, CircleHelp, Moon, Plus, Search, Sun } from "lucide-react";
+import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "../lib/cn";
 
 export default function TopBar() {
   const [darkMode, setDarkMode] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const location = useLocation();
+  const navigate = useNavigate();
   const isEditor = location.pathname === "/editor" || /^\/drafts\/\d+$/.test(location.pathname);
   const isContentPath = location.pathname === "/new";
 
@@ -13,6 +16,22 @@ export default function TopBar() {
     document.documentElement.classList.toggle("dark", darkMode);
     document.documentElement.classList.toggle("light", !darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    if (location.pathname !== "/drafts") {
+      setSearchTerm("");
+      return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    setSearchTerm(params.get("search") ?? "");
+  }, [location.pathname, location.search]);
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const keyword = searchTerm.trim();
+    navigate(keyword ? `/drafts?search=${encodeURIComponent(keyword)}` : "/drafts");
+  };
 
   return (
     <header className="fixed left-0 top-0 z-50 flex h-16 w-full items-center justify-between border-b border-gray-100 bg-white/80 px-4 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/80 sm:px-6">
@@ -75,28 +94,23 @@ export default function TopBar() {
             })}
           </nav>
         ) : (
-          <label className="hidden items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900 md:flex">
+          <form
+            className="hidden items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900 md:flex"
+            onSubmit={handleSearch}
+          >
             <Search size={18} className="text-gray-500" />
             <input
               className="w-64 border-0 bg-transparent p-0 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:ring-0 dark:text-zinc-100"
-              placeholder="프로젝트 검색"
+              placeholder="글 검색"
               type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
             />
-          </label>
+          </form>
         )}
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
-        {isContentPath ? (
-          <label className="hidden items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-900 md:flex">
-            <Search size={18} className="text-gray-500" />
-            <input
-              className="w-48 border-0 bg-transparent p-0 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:ring-0 dark:text-zinc-100"
-              placeholder="템플릿 검색"
-              type="search"
-            />
-          </label>
-        ) : null}
         {isEditor ? (
           <div className="hidden items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 dark:bg-zinc-900 sm:flex">
             <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />

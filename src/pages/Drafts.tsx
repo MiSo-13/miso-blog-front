@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Loader2, Plus } from "lucide-react";
-import { Link } from "react-router-dom";
+import { FileText, Loader2, Plus, Search, X } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { EmptyState } from "../components/StateBlock";
 import { api } from "../lib/api";
 import { cn } from "../lib/cn";
@@ -16,12 +16,24 @@ const statusStyle: Record<BlogPostStatus, string> = {
 };
 
 export default function Drafts() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const blogPostsQuery = useQuery({
     queryKey: ["blog-posts"],
     queryFn: api.blogPosts,
     retry: false,
   });
   const posts = blogPostsQuery.isSuccess ? blogPostsQuery.data : [];
+  const searchTerm = (searchParams.get("search") ?? "").trim();
+  const normalizedSearchTerm = searchTerm.toLowerCase();
+  const filteredPosts = normalizedSearchTerm
+    ? posts.filter((post) =>
+        [post.title, post.summary ?? "", statusLabel(post.status), ...post.tags]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearchTerm),
+      )
+    : posts;
+  const hasSearch = searchTerm.length > 0;
 
   return (
     <div className="pt-8">
@@ -35,6 +47,29 @@ export default function Drafts() {
           새 초안
         </Link>
       </div>
+
+      {hasSearch ? (
+        <section className="mb-6 flex flex-col justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3">
+            <Search className="text-blue-600" size={20} />
+            <div>
+              <p className="text-sm font-bold text-gray-950 dark:text-white">검색 결과</p>
+              <p className="text-xs text-gray-500 dark:text-zinc-500">
+                {filteredPosts.length}개 글이 "{searchTerm}"에 맞습니다
+              </p>
+            </div>
+          </div>
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            title="검색 지우기"
+            type="button"
+            onClick={() => setSearchParams({})}
+          >
+            <X size={16} />
+            지우기
+          </button>
+        </section>
+      ) : null}
 
       {blogPostsQuery.isLoading ? (
         <div className="flex min-h-72 items-center justify-center rounded-lg border border-gray-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
@@ -53,9 +88,18 @@ export default function Drafts() {
         />
       ) : null}
 
-      {posts.length > 0 ? (
+      {!blogPostsQuery.isLoading && posts.length > 0 && filteredPosts.length === 0 ? (
+        <EmptyState
+          description="검색어를 바꾸거나 검색을 지우면 전체 글을 다시 볼 수 있습니다."
+          icon={Search}
+          title="검색 결과가 없습니다"
+          tone="gray"
+        />
+      ) : null}
+
+      {filteredPosts.length > 0 ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          {posts.map((post) => (
+          {filteredPosts.map((post) => (
             <article
               className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:border-blue-200 hover:shadow-soft dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-500/40"
               key={post.id}
