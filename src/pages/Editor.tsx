@@ -96,6 +96,8 @@ export default function Editor() {
   const [commitMessage, setCommitMessage] = useState("");
   const [selectedGithubTargetId, setSelectedGithubTargetId] = useState<number | null>(null);
   const [githubTargetTestResult, setGithubTargetTestResult] = useState<GitHubPagesConnectionTest | null>(null);
+  const [diffFromVersionNo, setDiffFromVersionNo] = useState<number | null>(null);
+  const [diffToVersionNo, setDiffToVersionNo] = useState<number | null>(null);
   const [canonicalUrl, setCanonicalUrl] = useState("");
   const [includeCanonicalLink, setIncludeCanonicalLink] = useState(true);
   const [includeSourceNote, setIncludeSourceNote] = useState(true);
@@ -123,10 +125,22 @@ export default function Editor() {
     enabled: blogPostId !== null && Number.isFinite(blogPostId),
     retry: false,
   });
+  const versionOptions = useMemo(
+    () =>
+      (versionsQuery.isSuccess ? versionsQuery.data : [])
+        .slice()
+        .sort((left, right) => left.versionNo - right.versionNo),
+    [versionsQuery.data, versionsQuery.isSuccess],
+  );
+  const canCompareVersions =
+    blogPostId !== null &&
+    diffFromVersionNo !== null &&
+    diffToVersionNo !== null &&
+    diffFromVersionNo !== diffToVersionNo;
   const versionDiffQuery = useQuery({
-    queryKey: ["blog-post-version-diff", blogPostId],
-    queryFn: () => api.blogPostVersionDiff(blogPostId!),
-    enabled: blogPostId !== null && Number.isFinite(blogPostId),
+    queryKey: ["blog-post-version-diff", blogPostId, diffFromVersionNo, diffToVersionNo],
+    queryFn: () => api.blogPostVersionDiff(blogPostId!, diffFromVersionNo, diffToVersionNo),
+    enabled: canCompareVersions,
     retry: false,
   });
   const publishTargetsQuery = useQuery({
@@ -160,6 +174,27 @@ export default function Editor() {
     setSourceNote(blogPostQuery.data.sourceNote ?? "");
     setMarkdown(blogPostQuery.data.contentMarkdown);
   }, [blogPostQuery.data]);
+
+  useEffect(() => {
+    if (versionOptions.length < 2) {
+      setDiffFromVersionNo(null);
+      setDiffToVersionNo(null);
+      return;
+    }
+
+    setDiffFromVersionNo((current) => {
+      if (current !== null && versionOptions.some((version) => version.versionNo === current)) {
+        return current;
+      }
+      return versionOptions[versionOptions.length - 2].versionNo;
+    });
+    setDiffToVersionNo((current) => {
+      if (current !== null && versionOptions.some((version) => version.versionNo === current)) {
+        return current;
+      }
+      return versionOptions[versionOptions.length - 1].versionNo;
+    });
+  }, [versionOptions]);
 
   useEffect(() => {
     if (githubTargets.length === 0) {
@@ -627,9 +662,9 @@ export default function Editor() {
                   <History className="text-blue-600" size={18} />
                   <h2 className="text-base font-bold text-gray-950 dark:text-white">버전 이력</h2>
                 </div>
-                {versionsQuery.isSuccess && versionsQuery.data.length > 0 ? (
+                {versionOptions.length > 0 ? (
                   <div className="mb-4 flex flex-wrap gap-2">
-                    {versionsQuery.data.slice(0, 8).map((version) => (
+                    {versionOptions.slice(-8).map((version) => (
                       <span
                         className="rounded-lg bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600 dark:bg-zinc-900 dark:text-zinc-300"
                         key={version.id}
@@ -644,7 +679,50 @@ export default function Editor() {
                     아직 버전 이력이 없습니다.
                   </p>
                 )}
-                <VersionDiffPanel diff={versionDiffQuery.data} />
+                {versionOptions.length >= 2 ? (
+                  <div className="mb-4 grid gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-zinc-800 dark:bg-zinc-900 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                    <label className="space-y-1">
+                      <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">비교 시작</span>
+                      <select
+                        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+                        title="비교 시작 버전"
+                        value={diffFromVersionNo ?? ""}
+                        onChange={(event) => setDiffFromVersionNo(event.target.value ? Number(event.target.value) : null)}
+                      >
+                        {versionOptions.map((version) => (
+                          <option key={version.id} value={version.versionNo}>
+                            v{version.versionNo} · {version.action}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">비교 대상</span>
+                      <select
+                        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+                        title="비교 대상 버전"
+                        value={diffToVersionNo ?? ""}
+                        onChange={(event) => setDiffToVersionNo(event.target.value ? Number(event.target.value) : null)}
+                      >
+                        {versionOptions.map((version) => (
+                          <option key={version.id} value={version.versionNo}>
+                            v{version.versionNo} · {version.action}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <span className="rounded-lg bg-white px-3 py-2 text-center text-xs font-semibold text-gray-500 dark:bg-zinc-950 dark:text-zinc-400">
+                      {versionDiffQuery.isFetching ? "비교 중" : "선택 비교"}
+                    </span>
+                  </div>
+                ) : null}
+                {versionOptions.length >= 2 && !canCompareVersions ? (
+                  <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-500 dark:bg-zinc-900 dark:text-zinc-400">
+                    서로 다른 두 버전을 선택하면 변경 내용을 볼 수 있습니다.
+                  </p>
+                ) : (
+                  <VersionDiffPanel diff={versionDiffQuery.data} />
+                )}
               </section>
             ) : null}
 
