@@ -187,4 +187,13 @@ export type PublishTarget = {
   contentRootPath?: string;
   customDomain?: string;
   active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type PublishStrategy = {
+  primaryChannel: string;
+  exposureChannel: string;
+  markdownPolicy: string;
+  targets: PublishTarget[];
 };

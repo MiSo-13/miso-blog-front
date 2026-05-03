@@ -72,13 +72,13 @@ export default function Sidebar() {
         </div>
 
         <div className="space-y-1">
-          <a
+          <button
             className="flex items-center gap-3 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-white dark:text-zinc-400 dark:hover:bg-zinc-800"
-            href="mailto:support@example.com"
+            type="button"
           >
             <BadgeHelp size={18} />
             Support
-          </a>
+          </button>
           <button className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-white dark:text-zinc-400 dark:hover:bg-zinc-800">
             <LogOut size={18} />
             Sign Out

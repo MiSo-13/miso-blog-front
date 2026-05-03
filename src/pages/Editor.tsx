@@ -28,20 +28,7 @@ import type {
   UpdateBlogPostPayload,
 } from "../types/api";
 
-const initialMarkdown = `# Introduction
-
-React Hooks introduced in version 16.8 have fundamentally changed how we build components. By allowing functional components to manage state and side effects, they simplified the component lifecycle.
-
-## Key Concepts
-
-- \`useState\`: For local state management.
-- \`useEffect\`: For handling side effects like data fetching.
-- \`useContext\`: For subscribing to React context without nesting.
-
-## Why it matters
-
-The biggest benefit is not syntax. Hooks make stateful behavior easier to extract, test, and reuse across focused components.
-`;
+const initialMarkdown = "";
 
 const toolbar = [
   { label: "Bold", icon: Bold },
@@ -75,10 +62,10 @@ export default function Editor() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const blogPostId = params.blogPostId ? Number(params.blogPostId) : null;
-  const [title, setTitle] = useState("The Impact of React Hooks on Frontend Architecture");
+  const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [summary, setSummary] = useState("");
-  const [tagsText, setTagsText] = useState("React, Frontend, Architecture");
+  const [tagsText, setTagsText] = useState("");
   const [sourceNote, setSourceNote] = useState("");
   const [reviewMemo, setReviewMemo] = useState("");
   const [targetReader, setTargetReader] = useState("");
@@ -589,7 +576,7 @@ export default function Editor() {
                       <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Canonical URL</span>
                       <input
                         className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
-                        placeholder="https://blog.example.com/post.html"
+                        placeholder="Canonical URL"
                         value={canonicalUrl}
                         onChange={(event) => setCanonicalUrl(event.target.value)}
                       />

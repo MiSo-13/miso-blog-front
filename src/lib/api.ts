@@ -15,6 +15,7 @@ import type {
   LocalRepository,
   PublishGithubPagesPayload,
   PublishGithubPagesResult,
+  PublishStrategy,
   PublishTarget,
   UpdateBlogPostPayload,
 } from "../types/api";
@@ -70,4 +71,7 @@ export const api = {
   job: (jobId: number) => unwrap<AiJob>(http.get(`/api/ai-jobs/${jobId}`)),
   localRepositories: () => unwrap<LocalRepository[]>(http.get("/api/local-repositories")),
   publishTargets: () => unwrap<PublishTarget[]>(http.get("/api/publish-targets")),
+  publishStrategy: () => unwrap<PublishStrategy>(http.get("/api/publish-targets/strategy")),
+  createDefaultPublishTargets: () =>
+    unwrap<PublishTarget[]>(http.post("/api/publish-targets/defaults")),
 };
