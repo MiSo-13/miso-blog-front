@@ -276,6 +276,8 @@ export type CreateLocalRepositoryPayload = {
   active?: boolean | null;
 };
 
+export type UpdateLocalRepositoryPayload = CreateLocalRepositoryPayload;
+
 export type LocalRepositoryAnalysisMode = "LOCAL_ONLY" | "OPENAI";
 
 export type LocalRepositoryAnalysisStatus = "SUCCEEDED" | "FAILED" | "RUNNING" | "PENDING" | string;

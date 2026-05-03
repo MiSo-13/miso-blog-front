@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, CheckCircle2, FileText, FolderOpen, PlusCircle, Sparkles, Wand2 } from "lucide-react";
+import { BarChart3, CheckCircle2, Edit3, FileText, FolderOpen, PlusCircle, Save, Sparkles, Wand2, X } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -13,6 +13,7 @@ import type {
   LocalRepositoryDefault,
   LocalRepository,
   LocalRepositoryAnalysisMode,
+  UpdateLocalRepositoryPayload,
   WriteBlogPostFromAnalysisPayload,
 } from "../types/api";
 
@@ -279,7 +280,28 @@ function DefaultRepositoryCard({
 function RepositoryCard({ repository }: { repository: LocalRepository }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: repository.name,
+    localPath: repository.localPath,
+    defaultBranch: repository.defaultBranch || "main",
+    description: repository.description ?? "",
+    active: repository.active,
+  });
   const [analysisForm, setAnalysisForm] = useState(defaultAnalysisForm);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setEditForm({
+        name: repository.name,
+        localPath: repository.localPath,
+        defaultBranch: repository.defaultBranch || "main",
+        description: repository.description ?? "",
+        active: repository.active,
+      });
+    }
+  }, [isEditing, repository]);
+
   const reportsQuery = useQuery({
     queryKey: ["local-repository-reports", repository.id],
     queryFn: () => api.localRepositoryReports(repository.id),
@@ -290,6 +312,15 @@ function RepositoryCard({ repository }: { repository: LocalRepository }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["local-repository-reports", repository.id] });
       queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
+    },
+  });
+  const updateRepositoryMutation = useMutation({
+    mutationFn: (payload: UpdateLocalRepositoryPayload) => api.updateLocalRepository(repository.id, payload),
+    onSuccess: () => {
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["local-repository-defaults"] });
+      queryClient.invalidateQueries({ queryKey: ["local-repositories"] });
+      queryClient.invalidateQueries({ queryKey: ["local-repository", repository.id] });
     },
   });
   const createDraftMutation = useMutation({
@@ -319,6 +350,27 @@ function RepositoryCard({ repository }: { repository: LocalRepository }) {
     setAnalysisForm((current) => ({ ...current, [field]: value }));
   };
 
+  const updateEditField = (field: keyof typeof editForm, value: string | boolean) => {
+    setEditForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const canUpdateRepository = editForm.name.trim().length > 0 && editForm.localPath.trim().length > 0;
+
+  const handleUpdateRepository = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canUpdateRepository) {
+      return;
+    }
+
+    updateRepositoryMutation.mutate({
+      name: editForm.name.trim(),
+      localPath: editForm.localPath.trim(),
+      defaultBranch: editForm.defaultBranch.trim() || null,
+      description: editForm.description.trim() || null,
+      active: editForm.active,
+    });
+  };
+
   const handleAnalyze = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     analyzeMutation.mutate({
@@ -336,9 +388,19 @@ function RepositoryCard({ repository }: { repository: LocalRepository }) {
         <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
           <FolderOpen size={22} />
         </div>
-        <span className={repository.active ? "text-xs font-bold uppercase text-emerald-600" : "text-xs font-bold uppercase text-gray-400"}>
-          {repository.active ? "활성" : "비활성"}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={repository.active ? "text-xs font-bold uppercase text-emerald-600" : "text-xs font-bold uppercase text-gray-400"}>
+            {repository.active ? "활성" : "비활성"}
+          </span>
+          <button
+            className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-blue-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            title={isEditing ? "편집 닫기" : "저장소 편집"}
+            type="button"
+            onClick={() => setIsEditing((current) => !current)}
+          >
+            {isEditing ? <X size={16} /> : <Edit3 size={16} />}
+          </button>
+        </div>
       </div>
       <h2 className="mb-2 text-xl font-bold text-gray-950 dark:text-white">{repository.name}</h2>
       <p className="mb-4 break-all text-sm leading-relaxed text-gray-600 dark:text-zinc-400">{repository.localPath}</p>
@@ -351,6 +413,81 @@ function RepositoryCard({ repository }: { repository: LocalRepository }) {
           <span className="font-bold text-gray-700 dark:text-zinc-300">수정일:</span> {formatDateTime(repository.updatedAt)}
         </p>
       </div>
+
+      {isEditing ? (
+        <form className="mt-6 rounded-lg border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-500/20 dark:bg-blue-500/10" onSubmit={handleUpdateRepository}>
+          <div className="mb-4 flex items-center gap-2">
+            <Edit3 className="text-blue-600" size={18} />
+            <h3 className="text-sm font-bold text-gray-950 dark:text-white">저장소 편집</h3>
+          </div>
+          <div className="grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">이름</span>
+                <input
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                  value={editForm.name}
+                  onChange={(event) => updateEditField("name", event.target.value)}
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">기본 브랜치</span>
+                <input
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                  value={editForm.defaultBranch}
+                  onChange={(event) => updateEditField("defaultBranch", event.target.value)}
+                />
+              </label>
+            </div>
+            <label className="space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">로컬 경로</span>
+              <input
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                value={editForm.localPath}
+                onChange={(event) => updateEditField("localPath", event.target.value)}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">설명</span>
+              <textarea
+                className="min-h-16 w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                value={editForm.description}
+                onChange={(event) => updateEditField("description", event.target.value)}
+              />
+            </label>
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400">
+                <input
+                  checked={editForm.active}
+                  type="checkbox"
+                  onChange={(event) => updateEditField("active", event.target.checked)}
+                />
+                활성 저장소
+              </label>
+              <div className="flex gap-2">
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  title="편집 취소"
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                >
+                  <X size={16} />
+                  취소
+                </button>
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!canUpdateRepository || updateRepositoryMutation.isPending}
+                  title="저장소 정보 저장"
+                  type="submit"
+                >
+                  <Save size={16} />
+                  {updateRepositoryMutation.isPending ? "저장 중" : "저장"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      ) : null}
 
       <form className="mt-6 rounded-lg border border-gray-100 bg-gray-50 p-4 dark:border-zinc-800 dark:bg-zinc-950" onSubmit={handleAnalyze}>
         <div className="mb-4 flex items-center gap-2">

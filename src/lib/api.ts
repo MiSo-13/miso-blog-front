@@ -31,6 +31,7 @@ import type {
   PublishStrategy,
   PublishTarget,
   UpdateBlogPostPayload,
+  UpdateLocalRepositoryPayload,
   UpdatePublishTargetPayload,
   WriteBlogPostFromAnalysisPayload,
 } from "../types/api";
@@ -117,8 +118,12 @@ export const api = {
   localRepositoryDefaults: () =>
     unwrap<LocalRepositoryDefault[]>(http.get("/api/local-repositories/defaults")),
   localRepositories: () => unwrap<LocalRepository[]>(http.get("/api/local-repositories")),
+  localRepository: (repositoryId: number) =>
+    unwrap<LocalRepository>(http.get(`/api/local-repositories/${repositoryId}`)),
   createLocalRepository: (payload: CreateLocalRepositoryPayload) =>
     unwrap<LocalRepository>(http.post("/api/local-repositories", payload)),
+  updateLocalRepository: (repositoryId: number, payload: UpdateLocalRepositoryPayload) =>
+    unwrap<LocalRepository>(http.patch(`/api/local-repositories/${repositoryId}`, payload)),
   analyzeLocalRepository: (repositoryId: number, payload: AnalyzeLocalRepositoryPayload) =>
     unwrap<AnalysisReport>(http.post(`/api/local-repositories/${repositoryId}/analyze`, payload)),
   localRepositoryReports: (repositoryId: number) =>
