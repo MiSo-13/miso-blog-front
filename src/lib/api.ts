@@ -74,6 +74,7 @@ export const api = {
     unwrap<ExportVelogResult>(http.post(`/api/blog-posts/${blogPostId}/export/velog`, payload)),
   jobs: () => unwrap<AiJob[]>(http.get("/api/ai-jobs")),
   job: (jobId: number) => unwrap<AiJob>(http.get(`/api/ai-jobs/${jobId}`)),
+  retryJob: (jobId: number) => unwrap<AiJob>(http.post(`/api/ai-jobs/${jobId}/retry`)),
   localRepositories: () => unwrap<LocalRepository[]>(http.get("/api/local-repositories")),
   createLocalRepository: (payload: CreateLocalRepositoryPayload) =>
     unwrap<LocalRepository>(http.post("/api/local-repositories", payload)),

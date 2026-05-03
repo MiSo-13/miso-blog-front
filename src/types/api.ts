@@ -140,6 +140,15 @@ export type ExportVelogResult = {
 
 export type AiJobStatus = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
 
+export type AiJobFailure = {
+  code: string;
+  message: string | null;
+  detailMessage: string | null;
+  retryable: boolean;
+  actionGuide: string | null;
+  failedAt: string | null;
+};
+
 export type AiJob = {
   id: number;
   type: string;
@@ -147,6 +156,10 @@ export type AiJob = {
   resultBlogPostId: number | null;
   resultJson: string | null;
   errorMessage: string | null;
+  failure: AiJobFailure | null;
+  retryable: boolean;
+  retryCount: number;
+  retriedFromJobId: number | null;
   startedAt: string | null;
   finishedAt: string | null;
   createdAt: string;
