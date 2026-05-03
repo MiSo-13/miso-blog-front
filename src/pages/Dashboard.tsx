@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
+import { EmptyState, Notice } from "../components/StateBlock";
 import { api } from "../lib/api";
 import { formatDateTime, statusLabel } from "../lib/format";
 import type { BlogPostStatus } from "../types/api";
@@ -178,17 +179,14 @@ export default function Dashboard() {
       </section>
 
       {!hasAnyData ? (
-        <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex gap-3">
-            <Sparkles className="mt-0.5 shrink-0 text-blue-600" size={20} />
-            <div>
-              <h2 className="text-sm font-bold text-gray-950 dark:text-white">작업 공간을 준비하는 중입니다</h2>
-              <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-zinc-400">
-                서버가 연결되면 글, 저장소, 이미지, AI 작업 현황이 이곳에 표시됩니다.
-              </p>
-            </div>
-          </div>
-        </section>
+        <div className="mb-8">
+          <Notice
+            description="서버가 연결되면 글, 저장소, 이미지, AI 작업 현황이 이곳에 표시됩니다."
+            icon={Sparkles}
+            title="작업 공간을 준비하는 중입니다"
+            tone="gray"
+          />
+        </div>
       ) : null}
 
       <section>
@@ -200,17 +198,17 @@ export default function Dashboard() {
         </div>
 
         {latestPosts.length === 0 ? (
-          <div className="rounded-lg border border-gray-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
-            <FileText className="mx-auto mb-4 text-blue-600" size={34} />
-            <h3 className="mb-2 text-xl font-bold text-gray-950 dark:text-white">표시할 글이 없습니다</h3>
-            <p className="mx-auto max-w-md text-sm leading-relaxed text-gray-600 dark:text-zinc-400">
-              글을 작성하거나 분석 결과로 초안을 만들면 최근 글이 이곳에 표시됩니다.
-            </p>
-            <Link className="mt-6 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white" title="글쓰기 시작" to="/new">
-              <PlusCircle size={17} />
-              글쓰기
-            </Link>
-          </div>
+          <EmptyState
+            action={
+              <Link className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white" title="글쓰기 시작" to="/new">
+                <PlusCircle size={17} />
+                글쓰기
+              </Link>
+            }
+            description="글을 작성하거나 분석 결과로 초안을 만들면 최근 글이 이곳에 표시됩니다."
+            icon={FileText}
+            title="표시할 글이 없습니다"
+          />
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {latestPosts.map((post) => (

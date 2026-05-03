@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { FileText, Loader2, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
+import { EmptyState } from "../components/StateBlock";
 import { api } from "../lib/api";
 import { cn } from "../lib/cn";
 import { formatDateTime, readingWordCount, statusLabel } from "../lib/format";
@@ -45,13 +46,11 @@ export default function Drafts() {
       ) : null}
 
       {!blogPostsQuery.isLoading && posts.length === 0 ? (
-        <div className="rounded-lg border border-gray-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
-          <FileText className="mx-auto mb-4 text-blue-600" size={34} />
-          <h2 className="mb-2 text-xl font-bold text-gray-950 dark:text-white">아직 초안이 없습니다</h2>
-          <p className="mx-auto max-w-md text-sm leading-relaxed text-gray-600 dark:text-zinc-400">
-            로컬 Git 분석으로 개발 글을 만들거나 직접 새 글을 작성할 수 있습니다.
-          </p>
-        </div>
+        <EmptyState
+          description="로컬 Git 분석으로 개발 글을 만들거나 직접 새 글을 작성할 수 있습니다."
+          icon={FileText}
+          title="아직 초안이 없습니다"
+        />
       ) : null}
 
       {posts.length > 0 ? (

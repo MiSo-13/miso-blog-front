@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle2, Clock3, FileText, Loader2, RefreshCw, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
+import { EmptyState, Notice } from "../components/StateBlock";
 import { api } from "../lib/api";
 import { cn } from "../lib/cn";
 import { formatDateTime, statusLabel } from "../lib/format";
@@ -84,13 +85,11 @@ export default function AiJobs() {
       </section>
 
       {jobs.length === 0 ? (
-        <section className="rounded-lg border border-gray-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
-          <Clock3 className="mx-auto mb-4 text-blue-600" size={34} />
-          <h2 className="mb-2 text-xl font-bold text-gray-950 dark:text-white">표시할 AI 작업이 없습니다</h2>
-          <p className="mx-auto max-w-md text-sm leading-relaxed text-gray-600 dark:text-zinc-400">
-            서버가 연결되고 AI 작업이 생성되면 이곳에 목록이 표시됩니다.
-          </p>
-        </section>
+        <EmptyState
+          description="서버가 연결되고 AI 작업이 생성되면 이곳에 목록이 표시됩니다."
+          icon={Clock3}
+          title="표시할 AI 작업이 없습니다"
+        />
       ) : (
         <section className="grid gap-4">
           {jobs.map((job) => (
@@ -105,9 +104,13 @@ export default function AiJobs() {
       )}
 
       {jobsQuery.isError ? (
-        <p className="mt-6 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-500 dark:bg-zinc-950 dark:text-zinc-400">
-          작업 목록을 불러오지 못했습니다. 서버 상태를 확인해 주세요.
-        </p>
+        <div className="mt-6">
+          <Notice
+            description="작업 목록을 불러오지 못했습니다. 서버 상태를 확인해 주세요."
+            icon={AlertCircle}
+            tone="gray"
+          />
+        </div>
       ) : null}
     </div>
   );

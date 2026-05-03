@@ -3,6 +3,7 @@ import { BarChart3, CheckCircle2, Edit3, FileText, FolderOpen, ListChecks, PlusC
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { EmptyState } from "../components/StateBlock";
 import { api } from "../lib/api";
 import { formatDateTime, statusLabel } from "../lib/format";
 import type {
@@ -195,13 +196,11 @@ export default function Projects() {
       </section>
 
       {repositories.length === 0 ? (
-        <section className="rounded-lg border border-gray-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
-          <FolderOpen className="mx-auto mb-4 text-blue-600" size={34} />
-          <h2 className="mb-2 text-xl font-bold text-gray-950 dark:text-white">등록된 저장소가 없습니다</h2>
-          <p className="mx-auto max-w-md text-sm leading-relaxed text-gray-600 dark:text-zinc-400">
-            서버가 연결되고 저장소를 등록하면 이곳에 목록이 표시됩니다.
-          </p>
-        </section>
+        <EmptyState
+          description="서버가 연결되고 저장소를 등록하면 이곳에 목록이 표시됩니다."
+          icon={FolderOpen}
+          title="등록된 저장소가 없습니다"
+        />
       ) : (
         <section className="grid gap-4 md:grid-cols-2">
           {repositories.map((repository) => (
@@ -633,8 +632,13 @@ function AnalysisReportPanel({
 
   if (!report) {
     return (
-      <div className="mt-4 rounded-lg border border-dashed border-gray-200 p-4 text-sm text-gray-500 dark:border-zinc-800 dark:text-zinc-500">
-        아직 분석 리포트가 없습니다.
+      <div className="mt-4">
+        <EmptyState
+          description="분석을 실행하면 결과가 이곳에 표시됩니다."
+          icon={ListChecks}
+          title="분석 리포트가 없습니다"
+          tone="gray"
+        />
       </div>
     );
   }

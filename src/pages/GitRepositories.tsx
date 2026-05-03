@@ -15,6 +15,7 @@ import {
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { EmptyState, Notice } from "../components/StateBlock";
 import { api } from "../lib/api";
 import { formatDateTime, statusLabel } from "../lib/format";
 import type {
@@ -87,17 +88,13 @@ export default function GitRepositories() {
         </p>
       </section>
 
-      <section className="mb-8 rounded-lg border border-blue-100 bg-blue-50/80 p-5 dark:border-blue-500/20 dark:bg-blue-500/10">
-        <div className="flex gap-3">
-          <ShieldAlert className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" size={20} />
-          <div>
-            <h2 className="text-sm font-bold text-gray-950 dark:text-white">분석 범위 확인</h2>
-            <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-zinc-400">
-              GitHub API로 읽은 커밋 요약과 패치 맥락을 서버의 AI 분석 흐름에 사용합니다. private 저장소나 민감한 코드가
-              포함된 경우에는 로컬 Git 분석을 먼저 사용하는 것을 권장합니다.
-            </p>
-          </div>
-        </div>
+      <section className="mb-8">
+        <Notice
+          description="GitHub API로 읽은 커밋 요약과 패치 맥락을 서버의 AI 분석 흐름에 사용합니다. private 저장소나 민감한 코드가 포함된 경우에는 로컬 Git 분석을 먼저 사용하는 것을 권장합니다."
+          icon={ShieldAlert}
+          title="분석 범위 확인"
+          tone="blue"
+        />
       </section>
 
       <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
@@ -156,13 +153,11 @@ export default function GitRepositories() {
       </section>
 
       {repositories.length === 0 ? (
-        <section className="rounded-lg border border-gray-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
-          <Github className="mx-auto mb-4 text-blue-600" size={34} />
-          <h2 className="mb-2 text-xl font-bold text-gray-950 dark:text-white">등록된 GitHub 저장소가 없습니다</h2>
-          <p className="mx-auto max-w-md text-sm leading-relaxed text-gray-600 dark:text-zinc-400">
-            서버가 연결되고 저장소를 등록하면 이곳에 목록이 표시됩니다.
-          </p>
-        </section>
+        <EmptyState
+          description="서버가 연결되고 저장소를 등록하면 이곳에 목록이 표시됩니다."
+          icon={Github}
+          title="등록된 GitHub 저장소가 없습니다"
+        />
       ) : (
         <section className="grid gap-4 xl:grid-cols-2">
           {repositories.map((repository) => (
@@ -426,9 +421,13 @@ function ReportPanel({
 
   if (!report) {
     return (
-      <div className="mt-6 rounded-lg border border-dashed border-gray-200 p-6 text-center dark:border-zinc-800">
-        <ListChecks className="mx-auto mb-3 text-blue-600" size={26} />
-        <p className="text-sm text-gray-600 dark:text-zinc-400">분석을 실행하면 결과가 이곳에 표시됩니다.</p>
+      <div className="mt-6">
+        <EmptyState
+          description="분석을 실행하면 결과가 이곳에 표시됩니다."
+          icon={ListChecks}
+          title="분석 리포트가 없습니다"
+          tone="gray"
+        />
       </div>
     );
   }

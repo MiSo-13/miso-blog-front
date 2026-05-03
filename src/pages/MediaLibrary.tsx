@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, ExternalLink, Image, ImagePlus, Loader2, Upload } from "lucide-react";
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
+import { EmptyState, Notice } from "../components/StateBlock";
 import { api, apiBaseUrl } from "../lib/api";
 import { formatDateTime } from "../lib/format";
 import type { BlogMediaAsset } from "../types/api";
@@ -142,20 +143,22 @@ export default function MediaLibrary() {
           </div>
         </form>
         {uploadMutation.isError ? (
-          <p className="mt-4 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-500 dark:bg-zinc-950 dark:text-zinc-400">
-            업로드를 완료하지 못했습니다. 파일 형식과 서버 상태를 확인해 주세요.
-          </p>
+          <div className="mt-4">
+            <Notice
+              description="업로드를 완료하지 못했습니다. 파일 형식과 서버 상태를 확인해 주세요."
+              icon={ImagePlus}
+              tone="gray"
+            />
+          </div>
         ) : null}
       </section>
 
       {assets.length === 0 ? (
-        <section className="rounded-lg border border-gray-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
-          <Image className="mx-auto mb-4 text-blue-600" size={34} />
-          <h2 className="mb-2 text-xl font-bold text-gray-950 dark:text-white">업로드된 이미지가 없습니다</h2>
-          <p className="mx-auto max-w-md text-sm leading-relaxed text-gray-600 dark:text-zinc-400">
-            서버가 연결되고 이미지가 업로드되면 이곳에 목록이 표시됩니다.
-          </p>
-        </section>
+        <EmptyState
+          description="서버가 연결되고 이미지가 업로드되면 이곳에 목록이 표시됩니다."
+          icon={Image}
+          title="업로드된 이미지가 없습니다"
+        />
       ) : (
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {assets.map((asset) => (
