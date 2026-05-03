@@ -363,6 +363,24 @@ export default function Editor() {
     selectedGithubTargetId !== null &&
     isGithubTargetTested;
   const canExportVelog = blogPostId !== null && (currentStatus === "APPROVED" || currentStatus === "PUBLISHED");
+  const githubPublishBlockedReason =
+    blogPostId === null
+      ? "저장된 글에서만 발행할 수 있습니다."
+      : currentStatus !== "APPROVED"
+        ? "GitHub Pages 발행은 승인됨 상태에서만 사용할 수 있습니다."
+        : githubTargets.length === 0
+          ? "설정 화면에서 활성 GitHub Pages 발행 대상을 먼저 만들어 주세요."
+          : selectedGithubTargetId === null
+            ? "GitHub Pages 발행 대상을 선택해 주세요."
+            : !isGithubTargetTested
+              ? "발행 전 GitHub Pages 연결 테스트를 성공시켜 주세요."
+              : null;
+  const velogExportBlockedReason =
+    blogPostId === null
+      ? "저장된 글에서만 내보낼 수 있습니다."
+      : currentStatus !== "APPROVED" && currentStatus !== "PUBLISHED"
+        ? "Velog 내보내기는 승인됨 또는 발행됨 상태에서 사용할 수 있습니다."
+        : null;
 
   const handleSave = () => {
     if (!canSave) {
@@ -814,13 +832,18 @@ export default function Editor() {
                   <button
                     className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={!canPublishGithub || githubPublishMutation.isPending}
-                    title="GitHub Pages로 발행"
+                    title={githubPublishBlockedReason ?? "GitHub Pages로 발행"}
                     type="button"
                     onClick={() => githubPublishMutation.mutate()}
                   >
                     <ExternalLink size={16} />
                     {githubPublishMutation.isPending ? "발행 중" : "발행"}
                   </button>
+                  {!canPublishGithub && githubPublishBlockedReason ? (
+                    <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+                      {githubPublishBlockedReason}
+                    </p>
+                  ) : null}
 
                   {githubPublishMutation.data ? (
                     <div className="rounded-lg bg-blue-50 p-3 text-sm leading-6 text-blue-800 dark:bg-blue-500/10 dark:text-blue-200">
@@ -872,13 +895,18 @@ export default function Editor() {
                     <button
                       className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                       disabled={!canExportVelog || velogExportMutation.isPending}
-                      title="Velog용 마크다운 내보내기"
+                      title={velogExportBlockedReason ?? "Velog용 마크다운 내보내기"}
                       type="button"
                       onClick={() => velogExportMutation.mutate()}
                     >
                       <Copy size={16} />
                       {velogExportMutation.isPending ? "내보내는 중" : "내보내기"}
                     </button>
+                    {!canExportVelog && velogExportBlockedReason ? (
+                      <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+                        {velogExportBlockedReason}
+                      </p>
+                    ) : null}
                   </div>
 
                   {velogExportMutation.data ? (
