@@ -27,10 +27,16 @@ export type BlogPost = {
   summary?: string;
   contentMarkdown: string;
   tags: string[];
+  sourceNote?: string | null;
   status: BlogPostStatus;
+  currentVersionNo: number;
+  approvedAt?: string | null;
+  publishedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
+
+export type BlogPostSummary = Omit<BlogPost, "contentMarkdown" | "sourceNote" | "approvedAt" | "publishedAt">;
 
 export type AiJobStatus = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
 

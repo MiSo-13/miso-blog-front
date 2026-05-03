@@ -3,6 +3,7 @@ import type {
   AiJob,
   ApiResponse,
   BlogPost,
+  BlogPostSummary,
   HealthResponse,
   LocalRepository,
   PublishTarget,
@@ -33,7 +34,7 @@ async function unwrap<T>(request: Promise<{ data: ApiResponse<T> | T }>): Promis
 
 export const api = {
   health: () => unwrap<HealthResponse>(http.get("/api/system/health")),
-  blogPosts: () => unwrap<BlogPost[]>(http.get("/api/blog-posts")),
+  blogPosts: () => unwrap<BlogPostSummary[]>(http.get("/api/blog-posts")),
   blogPost: (blogPostId: number) => unwrap<BlogPost>(http.get(`/api/blog-posts/${blogPostId}`)),
   jobs: () => unwrap<AiJob[]>(http.get("/api/ai-jobs")),
   job: (jobId: number) => unwrap<AiJob>(http.get(`/api/ai-jobs/${jobId}`)),

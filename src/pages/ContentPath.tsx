@@ -37,8 +37,8 @@ export default function ContentPath() {
             Choose your content path
           </h1>
           <p className="mx-auto max-w-[600px] text-lg leading-8 text-[#434655] dark:text-zinc-400">
-            Select the type of blog that best fits your current project. Lumina AI will tailor its suggestions and
-            formatting tools to your choice.
+            Select the type of blog that best fits your current project. MiSo Blog will tailor its suggestions and
+            writing workflow to your choice.
           </p>
         </section>
 
