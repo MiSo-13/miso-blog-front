@@ -3,6 +3,8 @@ import type {
   AiJob,
   ApiResponse,
   BlogPost,
+  BlogPostQualityReview,
+  BlogPostQualityReviewPayload,
   BlogPostSummary,
   CreateBlogPostPayload,
   HealthResponse,
@@ -42,6 +44,8 @@ export const api = {
     unwrap<BlogPost>(http.post("/api/blog-posts/draft/manual", payload)),
   updateBlogPost: (blogPostId: number, payload: UpdateBlogPostPayload) =>
     unwrap<BlogPost>(http.patch(`/api/blog-posts/${blogPostId}`, payload)),
+  reviewBlogPostQuality: (blogPostId: number, payload: BlogPostQualityReviewPayload) =>
+    unwrap<BlogPostQualityReview>(http.post(`/api/blog-posts/${blogPostId}/quality-review/ai`, payload)),
   jobs: () => unwrap<AiJob[]>(http.get("/api/ai-jobs")),
   job: (jobId: number) => unwrap<AiJob>(http.get(`/api/ai-jobs/${jobId}`)),
   localRepositories: () => unwrap<LocalRepository[]>(http.get("/api/local-repositories")),

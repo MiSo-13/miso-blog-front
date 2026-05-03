@@ -49,6 +49,31 @@ export type UpdateBlogPostPayload = {
 
 export type CreateBlogPostPayload = UpdateBlogPostPayload;
 
+export type BlogPostQualityReviewPayload = {
+  originalInputMemo?: string | null;
+  targetReader?: string | null;
+  monetizationGoal?: string | null;
+};
+
+export type BlogPostQualityReview = {
+  blogPostId: number;
+  verdict: string;
+  humanNaturalnessScore: number;
+  factualGroundingScore: number;
+  readabilityScore: number;
+  seoReadinessScore: number;
+  monetizationReadinessScore: number;
+  publishReady: boolean;
+  strengths: string[];
+  issues: string[];
+  unsupportedClaims: string[];
+  aiLikePhrases: string[];
+  monetizationSuggestions: string[];
+  revisionInstruction: string;
+  rawResponse: string;
+  modelName: string;
+};
+
 export type AiJobStatus = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
 
 export type AiJob = {

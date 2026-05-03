@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bold, Code2, Image, Italic, Link as LinkIcon, Send } from "lucide-react";
+import { Bold, ClipboardCheck, Code2, Image, Italic, Link as LinkIcon, Send } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { countWords } from "../lib/format";
-import type { CreateBlogPostPayload, UpdateBlogPostPayload } from "../types/api";
+import type { BlogPostQualityReviewPayload, CreateBlogPostPayload, UpdateBlogPostPayload } from "../types/api";
 
 const initialMarkdown = `# Introduction
 
@@ -41,6 +41,9 @@ export default function Editor() {
   const [summary, setSummary] = useState("");
   const [tagsText, setTagsText] = useState("React, Frontend, Architecture");
   const [sourceNote, setSourceNote] = useState("");
+  const [reviewMemo, setReviewMemo] = useState("");
+  const [targetReader, setTargetReader] = useState("");
+  const [monetizationGoal, setMonetizationGoal] = useState("");
   const [markdown, setMarkdown] = useState(initialMarkdown);
   const words = useMemo(() => countWords(`${title} ${markdown}`), [markdown, title]);
   const tags = useMemo(
@@ -86,12 +89,16 @@ export default function Editor() {
       navigate(`/drafts/${created.id}`, { replace: true });
     },
   });
+  const qualityReviewMutation = useMutation({
+    mutationFn: (payload: BlogPostQualityReviewPayload) => api.reviewBlogPostQuality(blogPostId!, payload),
+  });
 
   const canSave =
     title.trim().length > 0 &&
     markdown.trim().length > 0 &&
     (blogPostId === null || blogPostQuery.data?.status !== "PUBLISHED");
   const isSaving = updateMutation.isPending || createMutation.isPending;
+  const canReview = blogPostId !== null && blogPostQuery.data !== undefined;
 
   const handleSave = () => {
     if (!canSave) {
@@ -113,6 +120,18 @@ export default function Editor() {
     }
 
     updateMutation.mutate(payload);
+  };
+
+  const handleQualityReview = () => {
+    if (!canReview) {
+      return;
+    }
+
+    qualityReviewMutation.mutate({
+      originalInputMemo: reviewMemo || null,
+      targetReader: targetReader || null,
+      monetizationGoal: monetizationGoal || null,
+    });
   };
 
   return (
@@ -148,6 +167,17 @@ export default function Editor() {
           </span>
           {updateMutation.isSuccess || createMutation.isSuccess ? (
             <span className="hidden text-xs font-bold uppercase text-green-600 dark:text-green-400 md:inline">Saved</span>
+          ) : null}
+          {blogPostId ? (
+            <button
+              className="hidden items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/15 md:inline-flex"
+              disabled={!canReview || qualityReviewMutation.isPending}
+              type="button"
+              onClick={handleQualityReview}
+            >
+              <ClipboardCheck size={16} />
+              Review
+            </button>
           ) : null}
           <button
             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
@@ -226,6 +256,87 @@ export default function Editor() {
 
         <article className="hidden h-full w-1/2 overflow-y-auto bg-gray-50 p-8 dark:bg-zinc-900 lg:block">
           <div className="markdown-preview mx-auto max-w-[720px]">
+            {blogPostId ? (
+              <section className="mb-8 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-base font-bold text-gray-950 dark:text-white">AI Quality Review</h2>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">Check naturalness, grounding, readability, SEO, and monetization readiness.</p>
+                  </div>
+                  <button
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!canReview || qualityReviewMutation.isPending}
+                    type="button"
+                    onClick={handleQualityReview}
+                  >
+                    <ClipboardCheck size={16} />
+                    {qualityReviewMutation.isPending ? "Reviewing" : "Review"}
+                  </button>
+                </div>
+
+                <div className="grid gap-3">
+                  <textarea
+                    className="min-h-16 resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                    placeholder="Original memo or writing intent"
+                    value={reviewMemo}
+                    onChange={(event) => setReviewMemo(event.target.value)}
+                  />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <input
+                      className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                      placeholder="Target reader"
+                      value={targetReader}
+                      onChange={(event) => setTargetReader(event.target.value)}
+                    />
+                    <input
+                      className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                      placeholder="Monetization goal"
+                      value={monetizationGoal}
+                      onChange={(event) => setMonetizationGoal(event.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {qualityReviewMutation.data ? (
+                  <div className="mt-5 space-y-4">
+                    <div className="grid grid-cols-5 gap-2">
+                      {[
+                        ["Human", qualityReviewMutation.data.humanNaturalnessScore],
+                        ["Facts", qualityReviewMutation.data.factualGroundingScore],
+                        ["Read", qualityReviewMutation.data.readabilityScore],
+                        ["SEO", qualityReviewMutation.data.seoReadinessScore],
+                        ["Money", qualityReviewMutation.data.monetizationReadinessScore],
+                      ].map(([label, score]) => (
+                        <div className="rounded-lg bg-gray-50 p-2 text-center dark:bg-zinc-900" key={label}>
+                          <p className="text-xs font-bold text-gray-500 dark:text-zinc-500">{label}</p>
+                          <p className="text-lg font-bold text-gray-950 dark:text-white">{score}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="rounded-lg bg-blue-50 p-3 text-sm font-semibold leading-6 text-blue-800 dark:bg-blue-500/10 dark:text-blue-200">
+                      {qualityReviewMutation.data.verdict}
+                    </p>
+                    {qualityReviewMutation.data.issues.length > 0 ? (
+                      <div>
+                        <h3 className="mb-2 text-sm font-bold text-gray-950 dark:text-white">Issues</h3>
+                        <ul className="space-y-1 text-sm text-gray-600 dark:text-zinc-400">
+                          {qualityReviewMutation.data.issues.slice(0, 4).map((issue) => (
+                            <li key={issue}>{issue}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {qualityReviewMutation.data.revisionInstruction ? (
+                      <div>
+                        <h3 className="mb-2 text-sm font-bold text-gray-950 dark:text-white">Revision Instruction</h3>
+                        <p className="text-sm leading-6 text-gray-600 dark:text-zinc-400">{qualityReviewMutation.data.revisionInstruction}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
+
             {title.trim() ? <h1>{title}</h1> : null}
             {summary.trim() ? <p className="text-lg text-gray-600 dark:text-zinc-300">{summary}</p> : null}
             {tags.length > 0 ? (
