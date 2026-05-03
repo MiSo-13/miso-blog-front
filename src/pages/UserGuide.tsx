@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  BookOpen,
   CheckCircle2,
   Code2,
   FileText,
@@ -25,7 +26,7 @@ const quickSteps = [
   },
   {
     title: "초안을 만듭니다",
-    description: "분석 결과나 입력한 메모를 바탕으로 AI 작업을 시작합니다. 긴 작업은 AI 작업 화면에서 상태를 확인할 수 있습니다.",
+    description: "분석 결과나 입력한 메모를 바탕으로 AI 작업을 시작합니다. 활성 레퍼런스도 함께 참고됩니다.",
     href: "/jobs",
     icon: Wand2,
   },
@@ -53,6 +54,7 @@ const statusItems = [
 const devTips = [
   "처음에는 로컬 Git 분석의 LOCAL_ONLY 방식을 권장합니다. 기본 분석은 외부 AI로 코드를 보내지 않습니다.",
   "focus에는 구현 기능, 장애 원인, 트러블슈팅, 구조 개선처럼 글의 방향을 구체적으로 적습니다.",
+  "공식 문서나 장애 분석 자료처럼 계속 참고할 링크는 개발 레퍼런스로 저장해두면 AI 작업에 함께 전달됩니다.",
   "GitHub 저장소 분석은 timeout을 피하기 위해 비동기 AI 작업으로 시작되며, 필요하면 전체 커밋 분석 옵션을 사용할 수 있습니다.",
   "글감 후보를 고를 때는 관련 파일과 키워드를 함께 확인해 실제로 내가 구현한 내용인지 점검합니다.",
   "초안이 만들어진 뒤에는 실제 에러 메시지, 왜 그 선택을 했는지, 최종 결과를 직접 한두 문단 추가하면 글이 훨씬 자연스러워집니다.",
@@ -62,8 +64,17 @@ const generalTips = [
   "메모에는 방문 시간, 웨이팅, 분위기, 가격대, 재방문 의사처럼 본인만 아는 정보를 넣습니다.",
   "사진은 먼저 이미지 보관함에 업로드하고, 사진별 설명과 본문 배치 메모를 적어두면 초안 품질이 좋아집니다. 업로드 후 제외한 사진은 글 작성 자료에 포함되지 않습니다.",
   "네이버 블로그 양식을 고르면 짧은 문단, 사진 중심 흐름, 친근한 후기체가 작성 지시에 함께 들어갑니다.",
+  "지도, 매장 안내, 제품 공식 페이지처럼 반복해서 확인할 링크는 일반 레퍼런스로 저장하고 설명을 자세히 적습니다.",
   "필수 문구는 광고 고지, 꼭 들어가야 하는 표현, 개인적으로 강조하고 싶은 문장을 넣는 곳입니다.",
   "키워드는 너무 많이 넣기보다 검색 의도를 담은 4~8개 정도가 좋습니다.",
+];
+
+const referenceTips = [
+  "레퍼런스 URL은 AI가 글을 쓸 때 참고하는 링크 목록입니다.",
+  "서버는 URL 본문을 자동으로 읽지 않으므로, 설명에 어떤 정보를 참고해야 하는지 적어야 합니다.",
+  "일반 블로그 초안은 일반 레퍼런스를, 개발 블로그 초안은 개발 레퍼런스를 우선 참고합니다.",
+  "이번 글과 관련 없는 링크는 삭제하지 않고 비활성화해두면 나중에 다시 사용할 수 있습니다.",
+  "이전 저장 글도 서버가 자동으로 참고하지만, 이전 글의 사실을 새 글에 섞는 용도가 아니라 문체와 구성 일관성을 맞추는 용도입니다.",
 ];
 
 const editChecklist = [
@@ -112,6 +123,24 @@ export default function UserGuide() {
         {quickSteps.map((step, index) => (
           <GuideCard description={step.description} href={step.href} icon={step.icon} key={step.title} title={`${index + 1}. ${step.title}`} />
         ))}
+      </section>
+
+      <section className="mb-10 rounded-lg border border-gray-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+        <SectionHeader
+          description="저장해둔 링크와 이전 글 컨텍스트는 AI가 더 일관된 초안을 만드는 데 쓰입니다."
+          icon={BookOpen}
+          title="레퍼런스와 이전 글"
+        />
+        <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
+          <TipList items={referenceTips} />
+          <div className="rounded-lg bg-gray-50 p-5 dark:bg-zinc-950">
+            <h3 className="mb-3 font-bold text-gray-950 dark:text-white">레퍼런스 관리</h3>
+            <p className="mb-4 text-sm leading-6 text-gray-600 dark:text-zinc-400">
+              URL, 제목, 설명, 태그, 활성 여부를 저장합니다. 설명은 AI가 참고할 방향을 알려주는 메모입니다.
+            </p>
+            <GuideLink href="/references" icon={BookOpen} label="레퍼런스" />
+          </div>
+        </div>
       </section>
 
       <section className="mb-10 rounded-lg border border-gray-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">

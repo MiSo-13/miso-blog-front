@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, CheckCircle2, Edit3, FileText, FolderOpen, ListChecks, PlusCircle, Save, Sparkles, Wand2, X } from "lucide-react";
+import { BarChart3, BookOpen, CheckCircle2, Edit3, FileText, FolderOpen, ListChecks, PlusCircle, Save, Sparkles, Wand2, X } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { EmptyState } from "../components/StateBlock";
+import { EmptyState, Notice } from "../components/StateBlock";
 import { api } from "../lib/api";
 import { formatDateTime, statusLabel } from "../lib/format";
 import type {
@@ -110,6 +110,15 @@ export default function Projects() {
         <p className="max-w-2xl text-gray-600 dark:text-zinc-400">
           로컬 저장소를 등록하면 서버가 커밋 기록과 구현 맥락을 분석해 글감으로 정리합니다.
         </p>
+      </section>
+
+      <section className="mb-8">
+        <Notice
+          description="활성화된 개발 레퍼런스 URL과 이전 저장 글의 문체 흐름이 AI 기반 글 작성에 함께 참고됩니다."
+          icon={BookOpen}
+          title="레퍼런스 자동 참고"
+          tone="blue"
+        />
       </section>
 
       {defaultRepositories.length > 0 ? (

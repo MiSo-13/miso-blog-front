@@ -116,6 +116,31 @@ export type CreateGeneralBlogPostPayload = {
   markReviewReady?: boolean | null;
 };
 
+export type BlogReferenceType = "DEVELOPMENT" | "GENERAL";
+
+export type BlogReferenceUrl = {
+  id: number;
+  type: BlogReferenceType;
+  title: string;
+  url: string;
+  description: string | null;
+  tags: string[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateBlogReferenceUrlPayload = {
+  type: BlogReferenceType;
+  title: string;
+  url: string;
+  description?: string | null;
+  tags?: string[] | null;
+  active?: boolean | null;
+};
+
+export type UpdateBlogReferenceUrlPayload = Partial<CreateBlogReferenceUrlPayload>;
+
 export type BlogPostQualityReviewPayload = {
   originalInputMemo?: string | null;
   targetReader?: string | null;

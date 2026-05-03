@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  BookOpen,
   CheckCircle2,
   Edit3,
   FileText,
@@ -107,6 +108,15 @@ export default function GitRepositories() {
           description="GitHub API로 읽은 커밋 요약과 패치 맥락을 서버의 AI 분석 흐름에 사용합니다. private 저장소나 민감한 코드가 포함된 경우에는 로컬 Git 분석을 먼저 사용하는 것을 권장합니다."
           icon={ShieldAlert}
           title="분석 범위 확인"
+          tone="blue"
+        />
+      </section>
+
+      <section className="mb-8">
+        <Notice
+          description="활성화된 개발 레퍼런스 URL과 이전 저장 글의 문체 흐름이 AI 기반 글 작성에 함께 참고됩니다."
+          icon={BookOpen}
+          title="레퍼런스 자동 참고"
           tone="blue"
         />
       </section>

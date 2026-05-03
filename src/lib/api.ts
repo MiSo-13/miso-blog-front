@@ -17,7 +17,10 @@ import type {
   BlogPostSummary,
   BlogPostVersion,
   BlogPostVersionDiff,
+  BlogReferenceType,
+  BlogReferenceUrl,
   CreatePublishTargetPayload,
+  CreateBlogReferenceUrlPayload,
   CreateBlogPostPayload,
   CreateBlogPostFromAnalysisPayload,
   CreateGeneralBlogPostPayload,
@@ -44,6 +47,7 @@ import type {
   GitHubRepositoryOption,
   PublishStrategy,
   PublishTarget,
+  UpdateBlogReferenceUrlPayload,
   UpdateBlogPostPayload,
   UpdateGitRepositoryPayload,
   UpdateLocalRepositoryPayload,
@@ -231,6 +235,15 @@ function successTitle(method: string, url: string) {
   if (method === "POST" && /\/api\/media\/images\/batch$/.test(url)) {
     return "이미지 묶음을 업로드했습니다.";
   }
+  if (method === "POST" && /\/api\/blog-reference-urls$/.test(url)) {
+    return "레퍼런스 URL을 추가했습니다.";
+  }
+  if (method === "PATCH" && /\/api\/blog-reference-urls\/\d+$/.test(url)) {
+    return "레퍼런스 URL을 저장했습니다.";
+  }
+  if (method === "DELETE" && /\/api\/blog-reference-urls\/\d+$/.test(url)) {
+    return "레퍼런스 URL을 삭제했습니다.";
+  }
   if (method === "POST" && /\/api\/ai-jobs\/\d+\/retry$/.test(url)) {
     return "작업을 다시 시작했습니다.";
   }
@@ -365,6 +378,14 @@ export const api = {
     unwrap<AiJob>(http.post(`/api/ai-jobs/blog-posts/${blogPostId}/quality-improve/ai`, payload)),
   createGeneralDraftJob: (payload: CreateGeneralBlogPostPayload) =>
     unwrap<AiJob>(http.post("/api/ai-jobs/blog-posts/draft/ai-general", payload)),
+  blogReferenceUrls: (type?: BlogReferenceType | null) =>
+    unwrap<BlogReferenceUrl[]>(http.get("/api/blog-reference-urls", { params: { type: type || undefined } })),
+  createBlogReferenceUrl: (payload: CreateBlogReferenceUrlPayload) =>
+    unwrap<BlogReferenceUrl>(http.post("/api/blog-reference-urls", payload)),
+  updateBlogReferenceUrl: (referenceUrlId: number, payload: UpdateBlogReferenceUrlPayload) =>
+    unwrap<BlogReferenceUrl>(http.patch(`/api/blog-reference-urls/${referenceUrlId}`, payload)),
+  deleteBlogReferenceUrl: (referenceUrlId: number) =>
+    unwrap<void>(http.delete(`/api/blog-reference-urls/${referenceUrlId}`)),
   createGitRepositoryAnalysisJob: (repositoryId: number, payload: AnalyzeGitRepositoryPayload) =>
     unwrap<AiJob>(http.post(`/api/ai-jobs/git-repositories/${repositoryId}/analyze`, payload)),
   markReviewReady: (blogPostId: number) =>

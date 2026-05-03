@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlignLeft, ImagePlus, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { AlignLeft, BookOpen, ImagePlus, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -278,6 +278,15 @@ export default function GeneralDraft() {
         <p className="max-w-2xl text-gray-600 dark:text-zinc-400">
           메모, 키워드, 사진 설명을 바탕으로 일반 블로그 초안을 생성합니다.
         </p>
+      </section>
+
+      <section className="mb-6 rounded-lg border border-blue-100 bg-blue-50/80 p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
+        <div className="flex gap-3">
+          <BookOpen className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-300" size={20} />
+          <p className="text-sm leading-6 text-blue-900 dark:text-blue-100">
+            활성화된 일반 레퍼런스 URL과 이전 저장 글의 문체 흐름이 AI 초안 생성에 함께 참고됩니다.
+          </p>
+        </div>
       </section>
 
       <form className="rounded-lg border border-gray-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900" onSubmit={handleSubmit}>
