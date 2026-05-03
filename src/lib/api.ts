@@ -1,6 +1,8 @@
 import axios from "axios";
 import type {
   AiJob,
+  AnalysisReport,
+  AnalyzeLocalRepositoryPayload,
   ApiResponse,
   BlogPost,
   BlogPostQualityImprovePayload,
@@ -9,6 +11,7 @@ import type {
   BlogPostRevisionPayload,
   BlogPostSummary,
   CreateBlogPostPayload,
+  CreateBlogPostFromAnalysisPayload,
   CreateLocalRepositoryPayload,
   ExportVelogPayload,
   ExportVelogResult,
@@ -19,6 +22,7 @@ import type {
   PublishStrategy,
   PublishTarget,
   UpdateBlogPostPayload,
+  WriteBlogPostFromAnalysisPayload,
 } from "../types/api";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8010";
@@ -73,6 +77,16 @@ export const api = {
   localRepositories: () => unwrap<LocalRepository[]>(http.get("/api/local-repositories")),
   createLocalRepository: (payload: CreateLocalRepositoryPayload) =>
     unwrap<LocalRepository>(http.post("/api/local-repositories", payload)),
+  analyzeLocalRepository: (repositoryId: number, payload: AnalyzeLocalRepositoryPayload) =>
+    unwrap<AnalysisReport>(http.post(`/api/local-repositories/${repositoryId}/analyze`, payload)),
+  localRepositoryReports: (repositoryId: number) =>
+    unwrap<AnalysisReport[]>(http.get(`/api/local-repositories/${repositoryId}/analysis-reports`)),
+  localRepositoryReport: (reportId: number) =>
+    unwrap<AnalysisReport>(http.get(`/api/local-repositories/analysis-reports/${reportId}`)),
+  createBlogPostFromAnalysis: (reportId: number, payload: CreateBlogPostFromAnalysisPayload) =>
+    unwrap<BlogPost>(http.post(`/api/local-repositories/analysis-reports/${reportId}/blog-post`, payload)),
+  writeBlogPostFromAnalysis: (reportId: number, payload: WriteBlogPostFromAnalysisPayload) =>
+    unwrap<BlogPost>(http.post(`/api/local-repositories/analysis-reports/${reportId}/write-blog-post`, payload)),
   publishTargets: () => unwrap<PublishTarget[]>(http.get("/api/publish-targets")),
   publishStrategy: () => unwrap<PublishStrategy>(http.get("/api/publish-targets/strategy")),
   createDefaultPublishTargets: () =>

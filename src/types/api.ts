@@ -172,18 +172,61 @@ export type CreateLocalRepositoryPayload = {
   active?: boolean | null;
 };
 
+export type LocalRepositoryAnalysisMode = "LOCAL_ONLY" | "OPENAI";
+
+export type LocalRepositoryAnalysisStatus = "SUCCEEDED" | "FAILED" | "RUNNING" | "PENDING" | string;
+
+export type AnalyzeLocalRepositoryPayload = {
+  commitLimit?: number | null;
+  includeUncommittedChanges?: boolean | null;
+  analysisMode?: LocalRepositoryAnalysisMode | null;
+  focus?: string | null;
+  createBlogPost?: boolean | null;
+};
+
 export type AnalysisReport = {
   id: number;
-  sourceSummary: string;
-  analysisSummary: string;
+  localRepositoryId: number;
+  status: LocalRepositoryAnalysisStatus;
+  analysisMode: LocalRepositoryAnalysisMode;
+  commitLimit: number;
+  includeUncommittedChanges: boolean;
+  focus?: string | null;
+  sourceSummary?: string | null;
+  analysisSummary?: string | null;
   keywords: string[];
   topicCandidates: Array<{
     title: string;
-    summary?: string;
+    angle?: string | null;
+    reason?: string | null;
     sourceFiles?: string[];
+    tags?: string[];
   }>;
-  recommendedTitle: string;
-  draftMarkdown: string;
+  recommendedTitle?: string | null;
+  draftMarkdown?: string | null;
+  createdBlogPostId?: number | null;
+  modelName?: string | null;
+  errorMessage?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateBlogPostFromAnalysisPayload = {
+  title?: string | null;
+  summary?: string | null;
+  tags?: string[] | null;
+  markReviewReady?: boolean | null;
+};
+
+export type BlogWritingMode = "LOCAL_ONLY" | "OPENAI";
+
+export type WriteBlogPostFromAnalysisPayload = {
+  selectedKeywords?: string[] | null;
+  selectedTopicTitle?: string | null;
+  writingFocus?: string | null;
+  audience?: string | null;
+  writingMode?: BlogWritingMode | null;
+  markReviewReady?: boolean | null;
 };
 
 export type PublishTarget = {
