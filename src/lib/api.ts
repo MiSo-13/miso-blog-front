@@ -13,6 +13,7 @@ import type {
   BlogPostSummary,
   BlogPostVersion,
   BlogPostVersionDiff,
+  CreatePublishTargetPayload,
   CreateBlogPostPayload,
   CreateBlogPostFromAnalysisPayload,
   CreateGeneralBlogPostPayload,
@@ -23,9 +24,13 @@ import type {
   LocalRepository,
   PublishGithubPagesPayload,
   PublishGithubPagesResult,
+  GitHubBranchOption,
+  GitHubPagesConnectionTest,
+  GitHubRepositoryOption,
   PublishStrategy,
   PublishTarget,
   UpdateBlogPostPayload,
+  UpdatePublishTargetPayload,
   WriteBlogPostFromAnalysisPayload,
 } from "../types/api";
 
@@ -123,6 +128,16 @@ export const api = {
     unwrap<BlogPost>(http.post(`/api/local-repositories/analysis-reports/${reportId}/write-blog-post`, payload)),
   publishTargets: () => unwrap<PublishTarget[]>(http.get("/api/publish-targets")),
   publishStrategy: () => unwrap<PublishStrategy>(http.get("/api/publish-targets/strategy")),
+  githubRepositoryOptions: () =>
+    unwrap<GitHubRepositoryOption[]>(http.get("/api/publish-targets/github/repositories")),
+  githubBranchOptions: (repositoryFullName: string) =>
+    unwrap<GitHubBranchOption[]>(http.get("/api/publish-targets/github/branches", { params: { repositoryFullName } })),
+  createPublishTarget: (payload: CreatePublishTargetPayload) =>
+    unwrap<PublishTarget>(http.post("/api/publish-targets", payload)),
+  updatePublishTarget: (targetId: number, payload: UpdatePublishTargetPayload) =>
+    unwrap<PublishTarget>(http.patch(`/api/publish-targets/${targetId}`, payload)),
+  testGithubPagesTarget: (targetId: number) =>
+    unwrap<GitHubPagesConnectionTest>(http.post(`/api/publish-targets/${targetId}/test-github-pages`)),
   createDefaultPublishTargets: () =>
     unwrap<PublishTarget[]>(http.post("/api/publish-targets/defaults")),
 };

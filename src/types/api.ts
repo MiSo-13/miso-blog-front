@@ -336,6 +336,53 @@ export type PublishTarget = {
   updatedAt?: string;
 };
 
+export type CreatePublishTargetPayload = {
+  channel: "GITHUB_PAGES" | "VELOG";
+  role: "PRIMARY" | "SECONDARY";
+  name: string;
+  baseUrl?: string | null;
+  repositoryFullName?: string | null;
+  branchName?: string | null;
+  contentRootPath?: string | null;
+  customDomain?: string | null;
+  active?: boolean | null;
+};
+
+export type UpdatePublishTargetPayload = Omit<CreatePublishTargetPayload, "channel">;
+
+export type GitHubRepositoryOption = {
+  name: string;
+  fullName: string;
+  ownerLogin: string;
+  defaultBranch: string;
+  privateRepository: boolean;
+  fork: boolean;
+  githubPagesCandidate: boolean;
+  htmlUrl: string;
+  updatedAt: string;
+};
+
+export type GitHubBranchOption = {
+  name: string;
+  commitSha: string;
+  protectedBranch: boolean;
+};
+
+export type GitHubPagesConnectionTest = {
+  targetId: number;
+  repositoryFullName: string;
+  branchName: string;
+  contentRootPath: string;
+  success: boolean;
+  checkedItems: string[];
+  warnings: string[];
+  repositoryUrl: string;
+  branchUrl: string;
+  contentRootUrl: string;
+  message: string;
+  checkedAt: string;
+};
+
 export type PublishStrategy = {
   primaryChannel: string;
   exposureChannel: string;
