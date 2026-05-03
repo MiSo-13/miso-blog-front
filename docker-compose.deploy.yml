@@ -1,0 +1,11 @@
+services:
+  miso-blog-front:
+    build:
+      context: .
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    image: miso-blog-front:latest
+    container_name: miso-blog-front
+    ports:
+      - "${MISO_BLOG_FRONT_PORT:-8020}:80"
+    restart: unless-stopped
