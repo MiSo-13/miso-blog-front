@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, CheckCircle2, Edit3, FileText, FolderOpen, PlusCircle, Save, Sparkles, Wand2, X } from "lucide-react";
+import { BarChart3, CheckCircle2, Edit3, FileText, FolderOpen, ListChecks, PlusCircle, Save, Sparkles, Wand2, X } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -289,6 +289,7 @@ function RepositoryCard({ repository }: { repository: LocalRepository }) {
     active: repository.active,
   });
   const [analysisForm, setAnalysisForm] = useState(defaultAnalysisForm);
+  const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isEditing) {
@@ -341,7 +342,20 @@ function RepositoryCard({ repository }: { repository: LocalRepository }) {
     },
   });
   const reports = reportsQuery.isSuccess ? reportsQuery.data : [];
-  const latestReport = analyzeMutation.data ?? reports[0];
+  const selectedReport =
+    analyzeMutation.data ??
+    reports.find((report) => report.id === selectedReportId) ??
+    reports[0];
+
+  useEffect(() => {
+    if (analyzeMutation.data) {
+      setSelectedReportId(analyzeMutation.data.id);
+      return;
+    }
+    if (reports.length > 0 && (selectedReportId === null || !reports.some((report) => report.id === selectedReportId))) {
+      setSelectedReportId(reports[0].id);
+    }
+  }, [analyzeMutation.data, reports, selectedReportId]);
 
   const updateAnalysisField = (
     field: keyof typeof analysisForm,
@@ -565,9 +579,12 @@ function RepositoryCard({ repository }: { repository: LocalRepository }) {
       </form>
 
       <AnalysisReportPanel
-        report={latestReport}
+        report={selectedReport}
+        reports={reports}
+        selectedReportId={selectedReport?.id ?? null}
         isCreatingDraft={createDraftMutation.isPending}
         isWritingDraft={writeDraftMutation.isPending}
+        onSelectReport={setSelectedReportId}
         onCreateDraft={(reportId) => createDraftMutation.mutate(reportId)}
         onWriteDraft={(reportId, payload) => writeDraftMutation.mutate({ reportId, payload })}
       />
@@ -577,14 +594,20 @@ function RepositoryCard({ repository }: { repository: LocalRepository }) {
 
 function AnalysisReportPanel({
   report,
+  reports,
+  selectedReportId,
   isCreatingDraft,
   isWritingDraft,
+  onSelectReport,
   onCreateDraft,
   onWriteDraft,
 }: {
   report?: AnalysisReport;
+  reports: AnalysisReport[];
+  selectedReportId: number | null;
   isCreatingDraft: boolean;
   isWritingDraft: boolean;
+  onSelectReport: (reportId: number | null) => void;
   onCreateDraft: (reportId: number) => void;
   onWriteDraft: (reportId: number, payload: WriteBlogPostFromAnalysisPayload) => void;
 }) {
@@ -594,6 +617,8 @@ function AnalysisReportPanel({
   const [audience, setAudience] = useState("");
   const [writingMode, setWritingMode] = useState<BlogWritingMode>("LOCAL_ONLY");
   const [markReviewReady, setMarkReviewReady] = useState(true);
+  const [showSourceSummary, setShowSourceSummary] = useState(false);
+  const [showDraftMarkdown, setShowDraftMarkdown] = useState(false);
 
   useEffect(() => {
     setSelectedKeywords([]);
@@ -602,6 +627,8 @@ function AnalysisReportPanel({
     setAudience("");
     setWritingMode("LOCAL_ONLY");
     setMarkReviewReady(true);
+    setShowSourceSummary(false);
+    setShowDraftMarkdown(false);
   }, [report?.id]);
 
   if (!report) {
@@ -639,12 +666,31 @@ function AnalysisReportPanel({
 
   return (
     <div className="mt-4 rounded-lg border border-gray-200 p-4 dark:border-zinc-800">
-      <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+      <div className="mb-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">{statusLabel(report.status)}</p>
           {report.recommendedTitle ? <h3 className="mt-1 font-bold text-gray-950 dark:text-white">{report.recommendedTitle}</h3> : null}
+          <p className="mt-1 text-xs text-gray-500 dark:text-zinc-500">
+            {report.analysisMode} · 커밋 {report.commitLimit}개 · {report.includeUncommittedChanges ? "미커밋 포함" : "커밋만"}
+          </p>
         </div>
-        <span className="text-xs text-gray-500 dark:text-zinc-500">{formatDateTime(report.updatedAt)}</span>
+        <div className="grid gap-2 sm:min-w-44">
+          <span className="text-xs text-gray-500 dark:text-zinc-500 sm:text-right">{formatDateTime(report.updatedAt)}</span>
+          {reports.length > 1 ? (
+            <select
+              className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+              title="분석 리포트 선택"
+              value={selectedReportId ?? ""}
+              onChange={(event) => onSelectReport(event.target.value ? Number(event.target.value) : null)}
+            >
+              {reports.map((item) => (
+                <option key={item.id} value={item.id}>
+                  #{item.id} · {statusLabel(item.status)} · {formatDateTime(item.updatedAt)}
+                </option>
+              ))}
+            </select>
+          ) : null}
+        </div>
       </div>
       {isComplete && report.analysisSummary ? (
         <p className="mb-3 text-sm leading-relaxed text-gray-600 dark:text-zinc-400">{report.analysisSummary}</p>
@@ -673,7 +719,11 @@ function AnalysisReportPanel({
       ) : null}
       {report.topicCandidates.length > 0 ? (
         <div className="mb-4 grid gap-2">
-          {report.topicCandidates.slice(0, 3).map((topic) => (
+          <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">
+            <ListChecks size={14} />
+            글감 후보 {report.topicCandidates.length}개
+          </div>
+          {report.topicCandidates.map((topic) => (
             <button
               className={[
                 "rounded-lg p-3 text-left transition",
@@ -697,6 +747,46 @@ function AnalysisReportPanel({
               ) : null}
             </button>
           ))}
+        </div>
+      ) : null}
+      {isComplete && (report.sourceSummary || report.draftMarkdown) ? (
+        <div className="mb-4 grid gap-2">
+          {report.sourceSummary ? (
+            <div className="rounded-lg border border-gray-100 bg-gray-50 dark:border-zinc-800 dark:bg-zinc-950">
+              <button
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm font-bold text-gray-900 dark:text-white"
+                title="분석 근거 미리보기"
+                type="button"
+                onClick={() => setShowSourceSummary((current) => !current)}
+              >
+                분석 근거
+                <span className="text-xs text-gray-500 dark:text-zinc-500">{showSourceSummary ? "닫기" : "보기"}</span>
+              </button>
+              {showSourceSummary ? (
+                <pre className="max-h-64 overflow-auto border-t border-gray-100 px-3 py-2 font-code text-xs leading-5 text-gray-600 dark:border-zinc-800 dark:text-zinc-400">
+                  {report.sourceSummary}
+                </pre>
+              ) : null}
+            </div>
+          ) : null}
+          {report.draftMarkdown ? (
+            <div className="rounded-lg border border-gray-100 bg-gray-50 dark:border-zinc-800 dark:bg-zinc-950">
+              <button
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm font-bold text-gray-900 dark:text-white"
+                title="추천 초안 미리보기"
+                type="button"
+                onClick={() => setShowDraftMarkdown((current) => !current)}
+              >
+                추천 초안
+                <span className="text-xs text-gray-500 dark:text-zinc-500">{showDraftMarkdown ? "닫기" : "보기"}</span>
+              </button>
+              {showDraftMarkdown ? (
+                <pre className="max-h-64 overflow-auto border-t border-gray-100 px-3 py-2 font-code text-xs leading-5 text-gray-600 dark:border-zinc-800 dark:text-zinc-400">
+                  {report.draftMarkdown}
+                </pre>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
       {isComplete ? (
