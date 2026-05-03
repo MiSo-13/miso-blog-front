@@ -9,6 +9,7 @@ import ContentPath from "./pages/ContentPath";
 import Editor from "./pages/Editor";
 import Drafts from "./pages/Drafts";
 import GeneralDraft from "./pages/GeneralDraft";
+import GitRepositories from "./pages/GitRepositories";
 import OpenAiOperations from "./pages/OpenAiOperations";
 import Projects from "./pages/Projects";
 import Settings from "./pages/Settings";
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
       { path: "new", element: <ContentPath /> },
       { path: "general/new", element: <GeneralDraft /> },
       { path: "projects", element: <Projects /> },
+      { path: "github-projects", element: <GitRepositories /> },
       { path: "editor", element: <Editor /> },
       { path: "drafts", element: <Drafts /> },
       { path: "drafts/:blogPostId", element: <Editor /> },

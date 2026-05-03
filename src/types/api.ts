@@ -317,6 +317,58 @@ export type AnalysisReport = {
   updatedAt: string;
 };
 
+export type GitRepository = {
+  id: number;
+  repositoryFullName: string;
+  defaultBranch: string;
+  description?: string | null;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type CreateGitRepositoryPayload = {
+  repositoryFullName: string;
+  defaultBranch?: string | null;
+  description?: string | null;
+  active?: boolean | null;
+};
+
+export type UpdateGitRepositoryPayload = CreateGitRepositoryPayload;
+
+export type GitAnalysisStatus = "SUCCEEDED" | "FAILED" | "RUNNING" | "PENDING" | string;
+
+export type AnalyzeGitRepositoryPayload = {
+  commitLimit?: number | null;
+  focus?: string | null;
+  createBlogPost?: boolean | null;
+};
+
+export type GitAnalysisReport = {
+  id: number;
+  repositoryId: number;
+  status: GitAnalysisStatus;
+  commitLimit: number;
+  focus?: string | null;
+  sourceSummary?: string | null;
+  analysisSummary?: string | null;
+  keywords: string[];
+  topicCandidates: Array<{
+    title: string;
+    angle?: string | null;
+    reason?: string | null;
+    sourceFiles?: string[];
+    tags?: string[];
+  }>;
+  recommendedTitle?: string | null;
+  draftMarkdown?: string | null;
+  createdBlogPostId?: number | null;
+  modelName?: string | null;
+  errorMessage?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type CreateBlogPostFromAnalysisPayload = {
   title?: string | null;
   summary?: string | null;

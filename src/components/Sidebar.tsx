@@ -3,6 +3,7 @@ import {
   Activity,
   FileText,
   FolderOpen,
+  Github,
   LayoutDashboard,
   LogOut,
   PenLine,
@@ -16,6 +17,7 @@ import { cn } from "../lib/cn";
 const navItems = [
   { label: "대시보드", href: "/", icon: LayoutDashboard },
   { label: "프로젝트", href: "/projects", icon: FolderOpen },
+  { label: "GitHub 분석", href: "/github-projects", icon: Github },
   { label: "초안", href: "/drafts", icon: FileText },
   { label: "글쓰기", href: "/new", icon: PenLine },
   { label: "AI 작업", href: "/jobs", icon: ScrollText },

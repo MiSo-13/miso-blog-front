@@ -2,6 +2,7 @@ import axios from "axios";
 import type {
   AiJob,
   AnalysisReport,
+  AnalyzeGitRepositoryPayload,
   AnalyzeLocalRepositoryPayload,
   ApiResponse,
   BlogMediaAsset,
@@ -17,9 +18,12 @@ import type {
   CreateBlogPostPayload,
   CreateBlogPostFromAnalysisPayload,
   CreateGeneralBlogPostPayload,
+  CreateGitRepositoryPayload,
   CreateLocalRepositoryPayload,
   ExportVelogPayload,
   ExportVelogResult,
+  GitAnalysisReport,
+  GitRepository,
   HealthResponse,
   LocalRepository,
   LocalRepositoryDefault,
@@ -38,6 +42,7 @@ import type {
   PublishStrategy,
   PublishTarget,
   UpdateBlogPostPayload,
+  UpdateGitRepositoryPayload,
   UpdateLocalRepositoryPayload,
   UpdatePublishTargetPayload,
   WriteBlogPostFromAnalysisPayload,
@@ -141,6 +146,23 @@ export const api = {
     unwrap<BlogPost>(http.post(`/api/local-repositories/analysis-reports/${reportId}/blog-post`, payload)),
   writeBlogPostFromAnalysis: (reportId: number, payload: WriteBlogPostFromAnalysisPayload) =>
     unwrap<BlogPost>(http.post(`/api/local-repositories/analysis-reports/${reportId}/write-blog-post`, payload)),
+  gitRepositories: () => unwrap<GitRepository[]>(http.get("/api/git-repositories")),
+  gitRepository: (repositoryId: number) =>
+    unwrap<GitRepository>(http.get(`/api/git-repositories/${repositoryId}`)),
+  createGitRepository: (payload: CreateGitRepositoryPayload) =>
+    unwrap<GitRepository>(http.post("/api/git-repositories", payload)),
+  updateGitRepository: (repositoryId: number, payload: UpdateGitRepositoryPayload) =>
+    unwrap<GitRepository>(http.patch(`/api/git-repositories/${repositoryId}`, payload)),
+  analyzeGitRepository: (repositoryId: number, payload: AnalyzeGitRepositoryPayload) =>
+    unwrap<GitAnalysisReport>(http.post(`/api/git-repositories/${repositoryId}/analyze`, payload)),
+  gitRepositoryReports: (repositoryId: number) =>
+    unwrap<GitAnalysisReport[]>(http.get(`/api/git-repositories/${repositoryId}/analysis-reports`)),
+  gitRepositoryReport: (reportId: number) =>
+    unwrap<GitAnalysisReport>(http.get(`/api/git-repositories/analysis-reports/${reportId}`)),
+  createBlogPostFromGitAnalysis: (reportId: number, payload: CreateBlogPostFromAnalysisPayload) =>
+    unwrap<BlogPost>(http.post(`/api/git-repositories/analysis-reports/${reportId}/blog-post`, payload)),
+  writeBlogPostFromGitAnalysis: (reportId: number, payload: WriteBlogPostFromAnalysisPayload) =>
+    unwrap<BlogPost>(http.post(`/api/git-repositories/analysis-reports/${reportId}/write-blog-post`, payload)),
   publishTargets: () => unwrap<PublishTarget[]>(http.get("/api/publish-targets")),
   publishStrategy: () => unwrap<PublishStrategy>(http.get("/api/publish-targets/strategy")),
   githubRepositoryOptions: () =>
