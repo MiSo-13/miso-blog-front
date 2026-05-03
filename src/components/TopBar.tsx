@@ -1,4 +1,4 @@
-import { Bell, CircleHelp, Moon, Plus, Search, Sun } from "lucide-react";
+import { CircleHelp, Moon, Plus, Search, Sun } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -136,23 +136,14 @@ export default function TopBar() {
         >
           {darkMode ? <Sun size={19} /> : <Moon size={19} />}
         </button>
-        <button
-          className="relative rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-blue-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          aria-label="알림"
-          title="알림"
-          type="button"
-        >
-          <Bell size={19} />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
-        </button>
-        <button
+        <Link
           className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-blue-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
           aria-label="도움말"
           title="도움말"
-          type="button"
+          to="/guide"
         >
           <CircleHelp size={19} />
-        </button>
+        </Link>
         <div className="ml-1 flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-gray-100 text-sm font-bold text-blue-600 dark:border-zinc-800 dark:bg-zinc-900">
           W
         </div>

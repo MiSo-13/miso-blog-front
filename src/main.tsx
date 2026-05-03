@@ -14,6 +14,7 @@ import MediaLibrary from "./pages/MediaLibrary";
 import OpenAiOperations from "./pages/OpenAiOperations";
 import Projects from "./pages/Projects";
 import Settings from "./pages/Settings";
+import UserGuide from "./pages/UserGuide";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -42,6 +43,7 @@ const router = createBrowserRouter([
       { path: "jobs", element: <AiJobs /> },
       { path: "openai", element: <OpenAiOperations /> },
       { path: "settings", element: <Settings /> },
+      { path: "guide", element: <UserGuide /> },
     ],
   },
 ]);
