@@ -33,7 +33,7 @@ export default function TopBar() {
               }
               to="/drafts"
             >
-              Drafts
+              초안
             </NavLink>
             <NavLink
               className={({ isActive }) =>
@@ -46,15 +46,15 @@ export default function TopBar() {
               }
               to="/new"
             >
-              Projects
+              프로젝트
             </NavLink>
           </nav>
         ) : isContentPath ? (
           <nav className="ml-2 hidden items-center gap-6 md:flex lg:ml-8">
             {[
-              { label: "Dashboard", href: "/" },
-              { label: "Projects", href: "/projects" },
-              { label: "Drafts", href: "/drafts" },
+              { label: "대시보드", href: "/" },
+              { label: "프로젝트", href: "/projects" },
+              { label: "초안", href: "/drafts" },
             ].map((item) => {
               const isActive = item.href === "/new";
 
@@ -79,7 +79,7 @@ export default function TopBar() {
             <Search size={18} className="text-gray-500" />
             <input
               className="w-64 border-0 bg-transparent p-0 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:ring-0 dark:text-zinc-100"
-              placeholder="Search projects..."
+              placeholder="프로젝트 검색"
               type="search"
             />
           </label>
@@ -92,7 +92,7 @@ export default function TopBar() {
             <Search size={18} className="text-gray-500" />
             <input
               className="w-48 border-0 bg-transparent p-0 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:ring-0 dark:text-zinc-100"
-              placeholder="Search templates..."
+              placeholder="템플릿 검색"
               type="search"
             />
           </label>
@@ -100,21 +100,23 @@ export default function TopBar() {
         {isEditor ? (
           <div className="hidden items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 dark:bg-zinc-900 sm:flex">
             <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
-            <span className="text-xs font-bold uppercase text-gray-500 dark:text-zinc-400">Ready</span>
+            <span className="text-xs font-bold uppercase text-gray-500 dark:text-zinc-400">준비됨</span>
           </div>
         ) : null}
         {!isContentPath ? (
           <Link
             className="hidden items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-[0.98] md:flex"
+            title="새 글 작성"
             to="/new"
           >
             <Plus size={18} />
-            New Post
+            새 글
           </Link>
         ) : null}
         <button
           className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-blue-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          title="Toggle theme"
+          aria-label="테마 전환"
+          title="테마 전환"
           type="button"
           onClick={() => setDarkMode((value) => !value)}
         >
@@ -122,7 +124,8 @@ export default function TopBar() {
         </button>
         <button
           className="relative rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-blue-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          title="Notifications"
+          aria-label="알림"
+          title="알림"
           type="button"
         >
           <Bell size={19} />
@@ -130,7 +133,8 @@ export default function TopBar() {
         </button>
         <button
           className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-blue-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          title="Help"
+          aria-label="도움말"
+          title="도움말"
           type="button"
         >
           <CircleHelp size={19} />

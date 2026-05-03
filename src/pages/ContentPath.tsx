@@ -8,17 +8,17 @@ type PathType = "development" | "general";
 const paths = [
   {
     id: "development" as const,
-    title: "Development Blog",
+    title: "개발 블로그",
     description:
-      "Optimized for technical documentation, code snippets, and dev-centric topics. Use local Git analysis, commit context, and implementation notes.",
+      "기술 문서, 코드 조각, 구현 기록에 맞춘 글쓰기 경로입니다. 로컬 Git 분석과 커밋 맥락을 글감으로 활용합니다.",
     icon: Code2,
     tone: "blue",
   },
   {
     id: "general" as const,
-    title: "General Blog",
+    title: "일반 블로그",
     description:
-      "Perfect for storytelling, restaurant reviews, travel notes, opinions, and general content with smooth multimedia support.",
+      "기록, 리뷰, 여행기, 의견 글처럼 넓은 주제에 맞춘 글쓰기 경로입니다. 읽기 좋은 구조와 멀티미디어 활용을 우선합니다.",
     icon: AlignLeft,
     tone: "neutral",
   },
@@ -32,13 +32,12 @@ export default function ContentPath() {
     <div className="flex min-h-[calc(100vh-4rem)] flex-col bg-[#faf8ff] text-[#131b2e] dark:bg-zinc-950 dark:text-zinc-50">
       <main className="flex flex-1 flex-col items-center justify-center px-6 pb-12 pt-16">
         <section className="mb-12 w-full max-w-[840px] space-y-4 text-center">
-          <span className="text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">Workspace Setup</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">작업 설정</span>
           <h1 className="text-5xl font-bold leading-tight text-[#131b2e] dark:text-white md:text-6xl">
-            Choose your content path
+            글쓰기 경로를 선택하세요
           </h1>
           <p className="mx-auto max-w-[600px] text-lg leading-8 text-[#434655] dark:text-zinc-400">
-            Select the type of blog that best fits your current project. MiSo Blog will tailor its suggestions and
-            writing workflow to your choice.
+            현재 작업에 맞는 블로그 유형을 선택하면 MiSo Blog가 제안과 작성 흐름을 그에 맞게 구성합니다.
           </p>
         </section>
 
@@ -79,7 +78,7 @@ export default function ContentPath() {
                     isSelected ? "text-blue-700 dark:text-blue-300" : "text-[#434655] group-hover:text-blue-700 dark:text-zinc-400",
                   )}
                 >
-                  <span>Select Path</span>
+                  <span>선택</span>
                   <ArrowRight size={16} />
                 </div>
                 <div
@@ -100,21 +99,22 @@ export default function ContentPath() {
         <section className="mt-16 flex w-full flex-col items-center gap-4">
           <button
             className="inline-flex items-center gap-3 rounded-full bg-blue-700 px-12 py-4 font-semibold text-white shadow-lg transition duration-300 hover:scale-[1.03] hover:bg-blue-800 active:scale-[0.98]"
+            title="에디터로 이동"
             type="button"
             onClick={() => navigate("/editor", { state: { contentPath: selected } })}
           >
-            Continue to Editor
+            에디터로 이동
             <Sparkles size={20} fill="currentColor" />
           </button>
           <p className="text-xs font-bold uppercase tracking-widest text-[#737686] dark:text-zinc-500">
-            You can change your template later in settings
+            템플릿은 나중에 설정에서 변경할 수 있습니다
           </p>
         </section>
       </main>
 
       <footer className="mt-auto flex flex-col items-center justify-between gap-4 border-t border-gray-100 px-6 py-8 dark:border-zinc-800 md:flex-row">
         <div className="flex items-center gap-6">
-          {["Privacy Policy", "Terms of Service", "Documentation"].map((item) => (
+          {["개인정보 처리방침", "서비스 약관", "문서"].map((item) => (
             <a className="text-xs font-bold uppercase tracking-wider text-[#434655] transition hover:text-blue-700 dark:text-zinc-400" href="#" key={item}>
               {item}
             </a>
@@ -122,7 +122,7 @@ export default function ContentPath() {
         </div>
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-green-500" />
-          <span className="text-xs font-bold uppercase tracking-wider text-[#434655] dark:text-zinc-400">AI Systems Operational</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-[#434655] dark:text-zinc-400">AI 시스템 정상</span>
         </div>
       </footer>
 

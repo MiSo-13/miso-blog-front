@@ -12,11 +12,11 @@ import { Link, useLocation } from "react-router-dom";
 import { cn } from "../lib/cn";
 
 const navItems = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Projects", href: "/projects", icon: FolderOpen },
-  { label: "Drafts", href: "/drafts", icon: FileText },
-  { label: "Write", href: "/new", icon: PenLine },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "대시보드", href: "/", icon: LayoutDashboard },
+  { label: "프로젝트", href: "/projects", icon: FolderOpen },
+  { label: "초안", href: "/drafts", icon: FileText },
+  { label: "글쓰기", href: "/new", icon: PenLine },
+  { label: "설정", href: "/settings", icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -30,7 +30,7 @@ export default function Sidebar() {
             <Sparkles size={20} fill="currentColor" />
           </div>
           <div>
-            <p className="text-sm font-extrabold text-gray-950 dark:text-white">Workspace</p>
+            <p className="text-sm font-extrabold text-gray-950 dark:text-white">작업 공간</p>
             <p className="text-xs text-gray-500 dark:text-zinc-400">MiSo Blog</p>
           </div>
         </div>
@@ -40,7 +40,7 @@ export default function Sidebar() {
         {navItems.map((item) => {
           const isActive =
             location.pathname === item.href ||
-            (location.pathname === "/editor" && item.label === "Drafts");
+            (location.pathname === "/editor" && item.label === "초안");
 
           return (
           <Link
@@ -67,11 +67,11 @@ export default function Sidebar() {
             type="button"
           >
             <BadgeHelp size={18} />
-            Support
+            도움말
           </button>
           <button className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-white dark:text-zinc-400 dark:hover:bg-zinc-800">
             <LogOut size={18} />
-            Sign Out
+            로그아웃
           </button>
         </div>
       </div>

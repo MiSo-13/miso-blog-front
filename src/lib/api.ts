@@ -42,7 +42,7 @@ async function unwrap<T>(request: Promise<{ data: ApiResponse<T> | T }>): Promis
     if (payload.success) {
       return payload.data;
     }
-    throw new Error(payload.message || "Request failed");
+    throw new Error(payload.message || "요청에 실패했습니다");
   }
 
   return payload as T;

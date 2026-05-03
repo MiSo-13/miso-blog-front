@@ -17,7 +17,7 @@ import remarkGfm from "remark-gfm";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { cn } from "../lib/cn";
-import { countWords } from "../lib/format";
+import { countWords, statusLabel } from "../lib/format";
 import type {
   BlogPost,
   BlogPostQualityImprovePayload,
@@ -31,11 +31,11 @@ import type {
 const initialMarkdown = "";
 
 const toolbar = [
-  { label: "Bold", icon: Bold },
-  { label: "Italic", icon: Italic },
-  { label: "Code", icon: Code2 },
-  { label: "Image", icon: Image },
-  { label: "Link", icon: LinkIcon },
+  { label: "굵게", icon: Bold },
+  { label: "기울임", icon: Italic },
+  { label: "코드", icon: Code2 },
+  { label: "이미지", icon: Image },
+  { label: "링크", icon: LinkIcon },
 ];
 
 const statusStyle: Record<BlogPostStatus, string> = {
@@ -47,9 +47,9 @@ const statusStyle: Record<BlogPostStatus, string> = {
 };
 
 const statusAction: Partial<Record<BlogPostStatus, { label: string; next: "review-ready" | "approve" | "publish" }>> = {
-  DRAFT: { label: "Mark Review Ready", next: "review-ready" },
-  REVIEW_READY: { label: "Approve", next: "approve" },
-  APPROVED: { label: "Mark Published", next: "publish" },
+  DRAFT: { label: "검토 요청", next: "review-ready" },
+  REVIEW_READY: { label: "승인", next: "approve" },
+  APPROVED: { label: "발행 처리", next: "publish" },
 };
 
 function refreshBlogPostCache(queryClient: ReturnType<typeof useQueryClient>, blogPostId: number | null, updated: BlogPost) {
@@ -392,45 +392,48 @@ export default function Editor() {
 
         <div className="flex items-center gap-4">
           <span className="hidden text-xs font-semibold uppercase text-gray-500 dark:text-zinc-400 sm:inline">
-            {blogPostQuery.isFetching ? "Loading..." : `${words} Words`}
+            {blogPostQuery.isFetching ? "불러오는 중" : `${words}단어`}
           </span>
           {currentStatus ? (
             <span className={cn("hidden rounded px-2 py-1 text-xs font-bold uppercase md:inline", statusStyle[currentStatus])}>
-              {currentStatus.replace(/_/g, " ").toLowerCase()}
+              {statusLabel(currentStatus)}
             </span>
           ) : null}
           {updateMutation.isSuccess || createMutation.isSuccess ? (
-            <span className="hidden text-xs font-bold uppercase text-green-600 dark:text-green-400 md:inline">Saved</span>
+            <span className="hidden text-xs font-bold uppercase text-green-600 dark:text-green-400 md:inline">저장됨</span>
           ) : null}
           {nextStatusAction ? (
             <button
               className="hidden items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800 lg:inline-flex"
               disabled={statusMutation.isPending}
+              title={nextStatusAction.label}
               type="button"
               onClick={handleStatusAction}
             >
-              {statusMutation.isPending ? "Updating" : nextStatusAction.label}
+              {statusMutation.isPending ? "처리 중" : nextStatusAction.label}
             </button>
           ) : null}
           {blogPostId ? (
             <button
               className="hidden items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/15 md:inline-flex"
               disabled={!canReview || qualityReviewMutation.isPending}
+              title="AI 품질 검토"
               type="button"
               onClick={handleQualityReview}
             >
               <ClipboardCheck size={16} />
-              Review
+              검토
             </button>
           ) : null}
           <button
             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
             disabled={!canSave || isSaving}
+            title={blogPostId ? "저장" : "초안 생성"}
             type="button"
             onClick={handleSave}
           >
             <Send size={16} />
-            {blogPostId ? "Save" : "Create Draft"}
+            {blogPostId ? "저장" : "초안 생성"}
           </button>
         </div>
       </section>
@@ -440,7 +443,7 @@ export default function Editor() {
           <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6">
             <input
               className="border-0 bg-transparent p-0 text-3xl font-semibold leading-tight text-gray-950 outline-none placeholder:text-gray-300 focus:ring-0 dark:text-white dark:placeholder:text-zinc-700"
-              placeholder="Post Title"
+              placeholder="제목"
               type="text"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
@@ -448,19 +451,19 @@ export default function Editor() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Slug</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">슬러그</span>
                 <input
                   className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
-                  placeholder="optional-slug"
+                  placeholder="선택 입력"
                   value={slug}
                   onChange={(event) => setSlug(event.target.value)}
                 />
               </label>
               <label className="space-y-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Tags</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">태그</span>
                 <input
                   className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
-                  placeholder="Spring Boot, OpenAI"
+                  placeholder="쉼표로 구분"
                   value={tagsText}
                   onChange={(event) => setTagsText(event.target.value)}
                 />
@@ -468,10 +471,10 @@ export default function Editor() {
             </div>
 
             <label className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Summary</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">요약</span>
               <textarea
                 className="min-h-20 w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
-                placeholder="Short summary for list cards and publishing metadata"
+                placeholder="목록과 발행 메타데이터에 사용할 짧은 요약"
                 value={summary}
                 onChange={(event) => setSummary(event.target.value)}
               />
@@ -487,10 +490,10 @@ export default function Editor() {
             </div>
 
             <label className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Source Note</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">출처 메모</span>
               <textarea
                 className="min-h-20 w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
-                placeholder="Optional source or analysis note"
+                placeholder="출처나 분석 메모를 선택적으로 입력"
                 value={sourceNote}
                 onChange={(event) => setSourceNote(event.target.value)}
               />
@@ -503,21 +506,22 @@ export default function Editor() {
             {blogPostId && currentStatus ? (
               <section className="mb-4 flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Workflow Status</p>
-                  <p className="mt-1 text-lg font-bold text-gray-950 dark:text-white">{currentStatus.replace(/_/g, " ").toLowerCase()}</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">작업 상태</p>
+                  <p className="mt-1 text-lg font-bold text-gray-950 dark:text-white">{statusLabel(currentStatus)}</p>
                 </div>
                 {nextStatusAction ? (
                   <button
                     className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={statusMutation.isPending}
+                    title={nextStatusAction.label}
                     type="button"
                     onClick={handleStatusAction}
                   >
-                    {statusMutation.isPending ? "Updating" : nextStatusAction.label}
+                    {statusMutation.isPending ? "처리 중" : nextStatusAction.label}
                   </button>
                 ) : (
                   <span className="rounded bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-600 dark:bg-zinc-800 dark:text-zinc-300">
-                    No next action
+                    다음 작업 없음
                   </span>
                 )}
               </section>
@@ -526,18 +530,18 @@ export default function Editor() {
             {blogPostId ? (
               <section className="mb-8 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
                 <div className="mb-4">
-                  <h2 className="text-base font-bold text-gray-950 dark:text-white">Publish & Export</h2>
+                  <h2 className="text-base font-bold text-gray-950 dark:text-white">발행 및 내보내기</h2>
                   <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-                    Publish approved posts to GitHub Pages and prepare copy-ready Velog content.
+                    승인된 글을 GitHub Pages로 발행하고 Velog에 옮길 콘텐츠를 준비합니다.
                   </p>
                 </div>
 
                 <div className="grid gap-3">
                   <label className="space-y-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">GitHub commit message</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">GitHub 커밋 메시지</span>
                     <input
                       className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
-                      placeholder={`Publish post: ${title}`}
+                      placeholder={`글 발행: ${title}`}
                       value={commitMessage}
                       onChange={(event) => setCommitMessage(event.target.value)}
                     />
@@ -545,11 +549,12 @@ export default function Editor() {
                   <button
                     className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={!canPublishGithub || githubPublishMutation.isPending}
+                    title="GitHub Pages로 발행"
                     type="button"
                     onClick={() => githubPublishMutation.mutate()}
                   >
                     <ExternalLink size={16} />
-                    {githubPublishMutation.isPending ? "Publishing" : "Publish to GitHub Pages"}
+                    {githubPublishMutation.isPending ? "발행 중" : "발행"}
                   </button>
 
                   {githubPublishMutation.data ? (
@@ -559,12 +564,12 @@ export default function Editor() {
                       <div className="mt-2 flex flex-wrap gap-3">
                         {githubPublishMutation.data.commitUrl ? (
                           <a className="font-bold underline" href={githubPublishMutation.data.commitUrl} rel="noreferrer" target="_blank">
-                            Commit
+                            커밋
                           </a>
                         ) : null}
                         {githubPublishMutation.data.expectedPublicUrl ? (
                           <a className="font-bold underline" href={githubPublishMutation.data.expectedPublicUrl} rel="noreferrer" target="_blank">
-                            Public URL
+                            공개 URL
                           </a>
                         ) : null}
                       </div>
@@ -588,7 +593,7 @@ export default function Editor() {
                           type="checkbox"
                           onChange={(event) => setIncludeCanonicalLink(event.target.checked)}
                         />
-                        Include canonical link
+                        Canonical 링크 포함
                       </label>
                       <label className="flex items-center gap-2">
                         <input
@@ -596,17 +601,18 @@ export default function Editor() {
                           type="checkbox"
                           onChange={(event) => setIncludeSourceNote(event.target.checked)}
                         />
-                        Include source note
+                        출처 메모 포함
                       </label>
                     </div>
                     <button
                       className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                       disabled={!canExportVelog || velogExportMutation.isPending}
+                      title="Velog용 마크다운 내보내기"
                       type="button"
                       onClick={() => velogExportMutation.mutate()}
                     >
                       <Copy size={16} />
-                      {velogExportMutation.isPending ? "Exporting" : "Export for Velog"}
+                      {velogExportMutation.isPending ? "내보내는 중" : "내보내기"}
                     </button>
                   </div>
 
@@ -619,10 +625,11 @@ export default function Editor() {
                         </div>
                         <button
                           className="rounded bg-white px-2 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50 dark:bg-zinc-950 dark:text-blue-300 dark:ring-blue-500/20"
+                          title="제목 복사"
                           type="button"
                           onClick={() => handleCopy("title", velogExportMutation.data.title)}
                         >
-                          {copiedLabel === "title" ? "Copied" : "Title"}
+                          {copiedLabel === "title" ? "복사됨" : "제목"}
                         </button>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -633,10 +640,11 @@ export default function Editor() {
                         ))}
                         <button
                           className="rounded bg-white px-2 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50 dark:bg-zinc-950 dark:text-blue-300 dark:ring-blue-500/20"
+                          title="태그 복사"
                           type="button"
                           onClick={() => handleCopy("tags", velogExportMutation.data.tags.join(", "))}
                         >
-                          {copiedLabel === "tags" ? "Copied" : "Copy tags"}
+                          {copiedLabel === "tags" ? "복사됨" : "태그 복사"}
                         </button>
                       </div>
                       <textarea
@@ -646,11 +654,12 @@ export default function Editor() {
                       />
                       <button
                         className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98]"
+                        title="마크다운 복사"
                         type="button"
                         onClick={() => handleCopy("markdown", velogExportMutation.data.markdown)}
                       >
                         <Copy size={16} />
-                        {copiedLabel === "markdown" ? "Copied Markdown" : "Copy Markdown"}
+                        {copiedLabel === "markdown" ? "복사됨" : "마크다운 복사"}
                       </button>
                     </div>
                   ) : null}
@@ -662,37 +671,38 @@ export default function Editor() {
               <section className="mb-8 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
                 <div className="mb-4 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-base font-bold text-gray-950 dark:text-white">AI Quality Review</h2>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">Check naturalness, grounding, readability, SEO, and monetization readiness.</p>
+                    <h2 className="text-base font-bold text-gray-950 dark:text-white">AI 품질 검토</h2>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">자연스러움, 근거성, 가독성, SEO, 수익화 준비도를 확인합니다.</p>
                   </div>
                   <button
                     className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={!canReview || qualityReviewMutation.isPending}
+                    title="AI 품질 검토"
                     type="button"
                     onClick={handleQualityReview}
                   >
                     <ClipboardCheck size={16} />
-                    {qualityReviewMutation.isPending ? "Reviewing" : "Review"}
+                    {qualityReviewMutation.isPending ? "검토 중" : "검토"}
                   </button>
                 </div>
 
                 <div className="grid gap-3">
                   <textarea
                     className="min-h-16 resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
-                    placeholder="Original memo or writing intent"
+                    placeholder="원문 메모 또는 작성 의도"
                     value={reviewMemo}
                     onChange={(event) => setReviewMemo(event.target.value)}
                   />
                   <div className="grid gap-3 sm:grid-cols-2">
                     <input
                       className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
-                      placeholder="Target reader"
+                      placeholder="대상 독자"
                       value={targetReader}
                       onChange={(event) => setTargetReader(event.target.value)}
                     />
                     <input
                       className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
-                      placeholder="Monetization goal"
+                      placeholder="수익화 목표"
                       value={monetizationGoal}
                       onChange={(event) => setMonetizationGoal(event.target.value)}
                     />
@@ -703,11 +713,11 @@ export default function Editor() {
                   <div className="mt-5 space-y-4">
                     <div className="grid grid-cols-5 gap-2">
                       {[
-                        ["Human", qualityReviewMutation.data.humanNaturalnessScore],
-                        ["Facts", qualityReviewMutation.data.factualGroundingScore],
-                        ["Read", qualityReviewMutation.data.readabilityScore],
+                        ["자연", qualityReviewMutation.data.humanNaturalnessScore],
+                        ["근거", qualityReviewMutation.data.factualGroundingScore],
+                        ["가독", qualityReviewMutation.data.readabilityScore],
                         ["SEO", qualityReviewMutation.data.seoReadinessScore],
-                        ["Money", qualityReviewMutation.data.monetizationReadinessScore],
+                        ["수익", qualityReviewMutation.data.monetizationReadinessScore],
                       ].map(([label, score]) => (
                         <div className="rounded-lg bg-gray-50 p-2 text-center dark:bg-zinc-900" key={label}>
                           <p className="text-xs font-bold text-gray-500 dark:text-zinc-500">{label}</p>
@@ -720,7 +730,7 @@ export default function Editor() {
                     </p>
                     {qualityReviewMutation.data.issues.length > 0 ? (
                       <div>
-                        <h3 className="mb-2 text-sm font-bold text-gray-950 dark:text-white">Issues</h3>
+                        <h3 className="mb-2 text-sm font-bold text-gray-950 dark:text-white">개선 항목</h3>
                         <ul className="space-y-1 text-sm text-gray-600 dark:text-zinc-400">
                           {qualityReviewMutation.data.issues.slice(0, 4).map((issue) => (
                             <li key={issue}>{issue}</li>
@@ -731,13 +741,14 @@ export default function Editor() {
                     {qualityReviewMutation.data.revisionInstruction ? (
                       <div>
                         <div className="mb-2 flex items-center justify-between gap-3">
-                          <h3 className="text-sm font-bold text-gray-950 dark:text-white">Revision Instruction</h3>
+                          <h3 className="text-sm font-bold text-gray-950 dark:text-white">수정 지시</h3>
                           <button
                             className="rounded bg-white px-2 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50 dark:bg-zinc-950 dark:text-blue-300 dark:ring-blue-500/20"
+                            title="수정 지시 사용"
                             type="button"
                             onClick={() => setRevisionInstruction(qualityReviewMutation.data.revisionInstruction)}
                           >
-                            Use
+                            사용
                           </button>
                         </div>
                         <p className="text-sm leading-6 text-gray-600 dark:text-zinc-400">{qualityReviewMutation.data.revisionInstruction}</p>
@@ -752,39 +763,40 @@ export default function Editor() {
               <section className="mb-8 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
                 <div className="mb-4 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-base font-bold text-gray-950 dark:text-white">AI Revision</h2>
+                    <h2 className="text-base font-bold text-gray-950 dark:text-white">AI 수정</h2>
                     <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-                      Send the quality review instruction through the async revision job flow.
+                      품질 검토 지시를 비동기 수정 작업으로 전달합니다.
                     </p>
                   </div>
                   <button
                     className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={revisionInstruction.trim().length === 0 || isRevisionRunning}
+                    title="AI 수정 작업 실행"
                     type="button"
                     onClick={handleRevisionJob}
                   >
                     <RefreshCw className={cn(isRevisionRunning && "animate-spin")} size={16} />
-                    {isRevisionRunning ? "Revising" : "Revise"}
+                    {isRevisionRunning ? "수정 중" : "수정"}
                   </button>
                 </div>
 
                 <div className="grid gap-3">
                   <textarea
                     className="min-h-24 resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
-                    placeholder="Revision instruction"
+                    placeholder="수정 지시"
                     value={revisionInstruction}
                     onChange={(event) => setRevisionInstruction(event.target.value)}
                   />
                   <textarea
                     className="min-h-16 resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
-                    placeholder="Additional memo"
+                    placeholder="추가 메모"
                     value={additionalMemo}
                     onChange={(event) => setAdditionalMemo(event.target.value)}
                   />
                   <div className="grid gap-3 sm:grid-cols-2">
                     <input
                       className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
-                      placeholder="Tone"
+                      placeholder="톤"
                       value={revisionTone}
                       onChange={(event) => setRevisionTone(event.target.value)}
                     />
@@ -793,19 +805,19 @@ export default function Editor() {
                       value={targetLength}
                       onChange={(event) => setTargetLength(event.target.value as "SHORT" | "MEDIUM" | "LONG")}
                     >
-                      <option value="SHORT">Short</option>
-                      <option value="MEDIUM">Medium</option>
-                      <option value="LONG">Long</option>
+                      <option value="SHORT">짧게</option>
+                      <option value="MEDIUM">보통</option>
+                      <option value="LONG">길게</option>
                     </select>
                   </div>
                   <div className="grid gap-2 text-sm text-gray-600 dark:text-zinc-400 sm:grid-cols-3">
                     <label className="flex items-center gap-2">
                       <input checked={preserveTitle} type="checkbox" onChange={(event) => setPreserveTitle(event.target.checked)} />
-                      Preserve title
+                      제목 유지
                     </label>
                     <label className="flex items-center gap-2">
                       <input checked={preserveTags} type="checkbox" onChange={(event) => setPreserveTags(event.target.checked)} />
-                      Preserve tags
+                      태그 유지
                     </label>
                     <label className="flex items-center gap-2">
                       <input
@@ -813,12 +825,12 @@ export default function Editor() {
                         type="checkbox"
                         onChange={(event) => setMarkReviewReadyAfterRevision(event.target.checked)}
                       />
-                      Review ready
+                      검토 대기로 전환
                     </label>
                   </div>
                   {revisionJobQuery.data ? (
                     <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-600 dark:bg-zinc-900 dark:text-zinc-300">
-                      Revision job: {revisionJobQuery.data.status.toLowerCase()}
+                      수정 작업: {statusLabel(revisionJobQuery.data.status)}
                     </p>
                   ) : null}
                 </div>
@@ -829,25 +841,26 @@ export default function Editor() {
               <section className="mb-8 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
                 <div className="mb-4 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-base font-bold text-gray-950 dark:text-white">Auto Quality Improve</h2>
+                    <h2 className="text-base font-bold text-gray-950 dark:text-white">자동 품질 개선</h2>
                     <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-                      Let the server review, revise, and re-review until the configured quality criteria are met.
+                      설정한 품질 기준을 충족할 때까지 서버가 검토와 수정을 반복합니다.
                     </p>
                   </div>
                   <button
                     className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={isImproveRunning}
+                    title="자동 품질 개선 실행"
                     type="button"
                     onClick={handleQualityImproveJob}
                   >
                     <RefreshCw className={cn(isImproveRunning && "animate-spin")} size={16} />
-                    {isImproveRunning ? "Improving" : "Auto Improve"}
+                    {isImproveRunning ? "개선 중" : "자동 개선"}
                   </button>
                 </div>
 
                 <div className="grid gap-3">
                   <label className="space-y-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Max revision rounds</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">최대 수정 라운드</span>
                     <input
                       className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
                       max={3}
@@ -859,11 +872,11 @@ export default function Editor() {
                   </label>
                   <div className="grid gap-3 sm:grid-cols-5">
                     {[
-                      ["Human", minimumHumanNaturalnessScore, setMinimumHumanNaturalnessScore],
-                      ["Facts", minimumFactualGroundingScore, setMinimumFactualGroundingScore],
-                      ["Read", minimumReadabilityScore, setMinimumReadabilityScore],
+                      ["자연", minimumHumanNaturalnessScore, setMinimumHumanNaturalnessScore],
+                      ["근거", minimumFactualGroundingScore, setMinimumFactualGroundingScore],
+                      ["가독", minimumReadabilityScore, setMinimumReadabilityScore],
                       ["SEO", minimumSeoReadinessScore, setMinimumSeoReadinessScore],
-                      ["Money", minimumMonetizationReadinessScore, setMinimumMonetizationReadinessScore],
+                      ["수익", minimumMonetizationReadinessScore, setMinimumMonetizationReadinessScore],
                     ].map(([label, value, setter]) => (
                       <label className="space-y-1" key={label as string}>
                         <span className="text-xs font-bold text-gray-500 dark:text-zinc-500">{label as string}</span>
@@ -881,7 +894,7 @@ export default function Editor() {
                   <div className="grid gap-2 text-sm text-gray-600 dark:text-zinc-400 sm:grid-cols-2">
                     <label className="flex items-center gap-2">
                       <input checked={requirePublishReady} type="checkbox" onChange={(event) => setRequirePublishReady(event.target.checked)} />
-                      Require publish ready
+                      발행 가능 판정 필요
                     </label>
                     <label className="flex items-center gap-2">
                       <input
@@ -889,12 +902,12 @@ export default function Editor() {
                         type="checkbox"
                         onChange={(event) => setMarkReviewReadyWhenPassed(event.target.checked)}
                       />
-                      Mark review ready when passed
+                      통과 시 검토 대기로 전환
                     </label>
                   </div>
                   {improveJobQuery.data ? (
                     <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-600 dark:bg-zinc-900 dark:text-zinc-300">
-                      Quality improve job: {improveJobQuery.data.status.toLowerCase()}
+                      품질 개선 작업: {statusLabel(improveJobQuery.data.status)}
                     </p>
                   ) : null}
                 </div>

@@ -26,12 +26,12 @@ export default function Drafts() {
     <div className="pt-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-950 dark:text-white">Drafts</h1>
-          <p className="mt-2 text-gray-600 dark:text-zinc-400">Review generated posts before approval and publishing.</p>
+          <h1 className="text-3xl font-bold text-gray-950 dark:text-white">초안</h1>
+          <p className="mt-2 text-gray-600 dark:text-zinc-400">승인과 발행 전에 작성 중인 글을 검토합니다.</p>
         </div>
-        <Link className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white" to="/new">
+        <Link className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white" title="새 초안 작성" to="/new">
           <Plus size={17} />
-          New Draft
+          새 초안
         </Link>
       </div>
 
@@ -39,7 +39,7 @@ export default function Drafts() {
         <div className="flex min-h-72 items-center justify-center rounded-lg border border-gray-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center gap-3 text-sm font-semibold text-gray-600 dark:text-zinc-300">
             <Loader2 className="animate-spin text-blue-600" size={20} />
-            Loading drafts
+            초안을 불러오는 중
           </div>
         </div>
       ) : null}
@@ -47,9 +47,9 @@ export default function Drafts() {
       {!blogPostsQuery.isLoading && posts.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
           <FileText className="mx-auto mb-4 text-blue-600" size={34} />
-          <h2 className="mb-2 text-xl font-bold text-gray-950 dark:text-white">No drafts yet</h2>
+          <h2 className="mb-2 text-xl font-bold text-gray-950 dark:text-white">아직 초안이 없습니다</h2>
           <p className="mx-auto max-w-md text-sm leading-relaxed text-gray-600 dark:text-zinc-400">
-            Start with a development blog from local Git analysis or create a general blog from notes and photos.
+            로컬 Git 분석으로 개발 글을 만들거나 직접 새 글을 작성할 수 있습니다.
           </p>
         </div>
       ) : null}
@@ -69,7 +69,7 @@ export default function Drafts() {
               </div>
               <h2 className="mb-2 text-xl font-bold leading-snug text-gray-950 dark:text-white">{post.title}</h2>
               <p className="mb-5 min-h-11 text-sm leading-relaxed text-gray-600 dark:text-zinc-400">
-                {post.summary || "No summary has been added yet."}
+                {post.summary || "요약이 아직 없습니다."}
               </p>
               <div className="mb-5 flex flex-wrap gap-2">
                 {post.tags.length > 0 ? (
@@ -79,15 +79,15 @@ export default function Drafts() {
                     </span>
                   ))
                 ) : (
-                  <span className="text-xs text-gray-400 dark:text-zinc-500">No tags</span>
+                  <span className="text-xs text-gray-400 dark:text-zinc-500">태그 없음</span>
                 )}
               </div>
               <div className="flex items-center justify-between border-t border-gray-100 pt-4 text-xs text-gray-500 dark:border-zinc-800 dark:text-zinc-500">
                 <span>v{post.currentVersionNo}</span>
                 <Link className="font-bold text-blue-600 hover:underline dark:text-blue-300" to={`/drafts/${post.id}`}>
-                  Open editor
+                  편집하기
                 </Link>
-                <span>{readingWordCount(post.summary)} summary words</span>
+                <span>요약 {readingWordCount(post.summary)}단어</span>
               </div>
             </article>
           ))}
