@@ -18,7 +18,7 @@ export type HealthResponse = {
   checkedAt?: string;
 };
 
-export type BlogPostStatus = "DRAFT" | "REVIEW_READY" | "APPROVED" | "PUBLISHED";
+export type BlogPostStatus = "DRAFT" | "REVIEW_READY" | "APPROVED" | "PUBLISHED" | "FAILED";
 
 export type BlogPost = {
   id: number;

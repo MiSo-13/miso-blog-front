@@ -46,6 +46,12 @@ export const api = {
     unwrap<BlogPost>(http.patch(`/api/blog-posts/${blogPostId}`, payload)),
   reviewBlogPostQuality: (blogPostId: number, payload: BlogPostQualityReviewPayload) =>
     unwrap<BlogPostQualityReview>(http.post(`/api/blog-posts/${blogPostId}/quality-review/ai`, payload)),
+  markReviewReady: (blogPostId: number) =>
+    unwrap<BlogPost>(http.post(`/api/blog-posts/${blogPostId}/review-ready`)),
+  approveBlogPost: (blogPostId: number) =>
+    unwrap<BlogPost>(http.post(`/api/blog-posts/${blogPostId}/approve`)),
+  markPublished: (blogPostId: number) =>
+    unwrap<BlogPost>(http.post(`/api/blog-posts/${blogPostId}/publish`)),
   jobs: () => unwrap<AiJob[]>(http.get("/api/ai-jobs")),
   job: (jobId: number) => unwrap<AiJob>(http.get(`/api/ai-jobs/${jobId}`)),
   localRepositories: () => unwrap<LocalRepository[]>(http.get("/api/local-repositories")),

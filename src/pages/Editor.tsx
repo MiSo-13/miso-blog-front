@@ -5,8 +5,15 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
+import { cn } from "../lib/cn";
 import { countWords } from "../lib/format";
-import type { BlogPostQualityReviewPayload, CreateBlogPostPayload, UpdateBlogPostPayload } from "../types/api";
+import type {
+  BlogPost,
+  BlogPostQualityReviewPayload,
+  BlogPostStatus,
+  CreateBlogPostPayload,
+  UpdateBlogPostPayload,
+} from "../types/api";
 
 const initialMarkdown = `# Introduction
 
@@ -30,6 +37,25 @@ const toolbar = [
   { label: "Image", icon: Image },
   { label: "Link", icon: LinkIcon },
 ];
+
+const statusStyle: Record<BlogPostStatus, string> = {
+  DRAFT: "bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:text-zinc-300",
+  REVIEW_READY: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  APPROVED: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  PUBLISHED: "bg-slate-900 text-white dark:bg-zinc-100 dark:text-zinc-950",
+  FAILED: "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+};
+
+const statusAction: Partial<Record<BlogPostStatus, { label: string; next: "review-ready" | "approve" | "publish" }>> = {
+  DRAFT: { label: "Mark Review Ready", next: "review-ready" },
+  REVIEW_READY: { label: "Approve", next: "approve" },
+  APPROVED: { label: "Mark Published", next: "publish" },
+};
+
+function refreshBlogPostCache(queryClient: ReturnType<typeof useQueryClient>, blogPostId: number | null, updated: BlogPost) {
+  queryClient.setQueryData(["blog-post", blogPostId], updated);
+  queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
+}
 
 export default function Editor() {
   const params = useParams();
@@ -78,8 +104,7 @@ export default function Editor() {
   const updateMutation = useMutation({
     mutationFn: (payload: UpdateBlogPostPayload) => api.updateBlogPost(blogPostId!, payload),
     onSuccess: (updated) => {
-      queryClient.setQueryData(["blog-post", blogPostId], updated);
-      queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
+      refreshBlogPostCache(queryClient, blogPostId, updated);
     },
   });
   const createMutation = useMutation({
@@ -92,7 +117,23 @@ export default function Editor() {
   const qualityReviewMutation = useMutation({
     mutationFn: (payload: BlogPostQualityReviewPayload) => api.reviewBlogPostQuality(blogPostId!, payload),
   });
+  const statusMutation = useMutation({
+    mutationFn: async (next: "review-ready" | "approve" | "publish") => {
+      if (next === "review-ready") {
+        return api.markReviewReady(blogPostId!);
+      }
+      if (next === "approve") {
+        return api.approveBlogPost(blogPostId!);
+      }
+      return api.markPublished(blogPostId!);
+    },
+    onSuccess: (updated) => {
+      refreshBlogPostCache(queryClient, blogPostId, updated);
+    },
+  });
 
+  const currentStatus = blogPostQuery.data?.status;
+  const nextStatusAction = currentStatus ? statusAction[currentStatus] : undefined;
   const canSave =
     title.trim().length > 0 &&
     markdown.trim().length > 0 &&
@@ -134,6 +175,14 @@ export default function Editor() {
     });
   };
 
+  const handleStatusAction = () => {
+    if (!nextStatusAction || blogPostId === null) {
+      return;
+    }
+
+    statusMutation.mutate(nextStatusAction.next);
+  };
+
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden bg-white dark:bg-zinc-950">
       <section className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950 sm:px-8">
@@ -165,8 +214,23 @@ export default function Editor() {
           <span className="hidden text-xs font-semibold uppercase text-gray-500 dark:text-zinc-400 sm:inline">
             {blogPostQuery.isFetching ? "Loading..." : `${words} Words`}
           </span>
+          {currentStatus ? (
+            <span className={cn("hidden rounded px-2 py-1 text-xs font-bold uppercase md:inline", statusStyle[currentStatus])}>
+              {currentStatus.replace(/_/g, " ").toLowerCase()}
+            </span>
+          ) : null}
           {updateMutation.isSuccess || createMutation.isSuccess ? (
             <span className="hidden text-xs font-bold uppercase text-green-600 dark:text-green-400 md:inline">Saved</span>
+          ) : null}
+          {nextStatusAction ? (
+            <button
+              className="hidden items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800 lg:inline-flex"
+              disabled={statusMutation.isPending}
+              type="button"
+              onClick={handleStatusAction}
+            >
+              {statusMutation.isPending ? "Updating" : nextStatusAction.label}
+            </button>
           ) : null}
           {blogPostId ? (
             <button
@@ -256,6 +320,29 @@ export default function Editor() {
 
         <article className="hidden h-full w-1/2 overflow-y-auto bg-gray-50 p-8 dark:bg-zinc-900 lg:block">
           <div className="markdown-preview mx-auto max-w-[720px]">
+            {blogPostId && currentStatus ? (
+              <section className="mb-4 flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Workflow Status</p>
+                  <p className="mt-1 text-lg font-bold text-gray-950 dark:text-white">{currentStatus.replace(/_/g, " ").toLowerCase()}</p>
+                </div>
+                {nextStatusAction ? (
+                  <button
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={statusMutation.isPending}
+                    type="button"
+                    onClick={handleStatusAction}
+                  >
+                    {statusMutation.isPending ? "Updating" : nextStatusAction.label}
+                  </button>
+                ) : (
+                  <span className="rounded bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-600 dark:bg-zinc-800 dark:text-zinc-300">
+                    No next action
+                  </span>
+                )}
+              </section>
+            ) : null}
+
             {blogPostId ? (
               <section className="mb-8 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
                 <div className="mb-4 flex items-center justify-between gap-4">

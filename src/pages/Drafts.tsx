@@ -11,6 +11,7 @@ const statusStyle: Record<BlogPostStatus, string> = {
   REVIEW_READY: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
   APPROVED: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
   PUBLISHED: "bg-slate-900 text-white dark:bg-zinc-100 dark:text-zinc-950",
+  FAILED: "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300",
 };
 
 export default function Drafts() {
