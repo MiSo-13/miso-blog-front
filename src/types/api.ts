@@ -403,3 +403,98 @@ export type PublishStrategy = {
   markdownPolicy: string;
   targets: PublishTarget[];
 };
+
+export type OpenAiSummary = {
+  apiKeyConfigured: boolean;
+  adminKeyConfigured: boolean;
+  effectiveKeyType: string | null;
+  keyLabel: string | null;
+  model: string | null;
+  costApiAvailable: boolean;
+  todayCostUsd: number | null;
+  monthToDateCostUsd: number | null;
+  budgetLimitUsd: number | null;
+  remainingBudgetUsd: number | null;
+  unavailableReason: string | null;
+  usageDashboardUrl: string | null;
+  billingUrl: string | null;
+};
+
+export type OpenAiCostChart = {
+  startAt: string;
+  endAt: string;
+  bucketWidth: string;
+  totalCostUsd: number;
+  buckets: Array<{
+    startAt: string;
+    endAt: string;
+    costUsd: number;
+    results: Array<{
+      projectId: string | null;
+      lineItem: string | null;
+      amountUsd: number;
+      currency: string | null;
+    }>;
+  }>;
+};
+
+export type OpenAiUsage = {
+  startAt: string;
+  endAt: string;
+  bucketWidth: string;
+  groupBy: string[];
+  totalInputTokens: number;
+  totalCachedInputTokens: number;
+  totalOutputTokens: number;
+  totalRequests: number;
+  buckets: Array<{
+    startAt: string;
+    endAt: string;
+    inputTokens: number;
+    cachedInputTokens: number;
+    outputTokens: number;
+    requests: number;
+    results: Array<{
+      model: string | null;
+      apiKeyId: string | null;
+      projectId: string | null;
+      userId: string | null;
+      batch: boolean | null;
+      serviceTier: string | null;
+      inputTokens: number;
+      cachedInputTokens: number;
+      outputTokens: number;
+      requests: number;
+    }>;
+  }>;
+};
+
+export type OpenAiEstimate = {
+  model: string;
+  inputTokens: number;
+  cachedInputTokens: number;
+  billableInputTokens: number;
+  outputTokens: number;
+  inputPricePerMillionUsd: number;
+  cachedInputPricePerMillionUsd: number;
+  outputPricePerMillionUsd: number;
+  estimatedCostUsd: number;
+  pricingNote: string;
+};
+
+export type OpenAiCostsQuery = {
+  startDate?: string | null;
+  endDate?: string | null;
+  groupBy?: string | null;
+};
+
+export type OpenAiUsageQuery = OpenAiCostsQuery & {
+  bucketWidth?: string | null;
+};
+
+export type OpenAiEstimateQuery = {
+  model?: string | null;
+  inputTokens?: number | null;
+  cachedInputTokens?: number | null;
+  outputTokens?: number | null;
+};

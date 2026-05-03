@@ -8,6 +8,7 @@ import ContentPath from "./pages/ContentPath";
 import Editor from "./pages/Editor";
 import Drafts from "./pages/Drafts";
 import GeneralDraft from "./pages/GeneralDraft";
+import OpenAiOperations from "./pages/OpenAiOperations";
 import Projects from "./pages/Projects";
 import Settings from "./pages/Settings";
 import "./index.css";
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
       { path: "editor", element: <Editor /> },
       { path: "drafts", element: <Drafts /> },
       { path: "drafts/:blogPostId", element: <Editor /> },
+      { path: "openai", element: <OpenAiOperations /> },
       { path: "settings", element: <Settings /> },
     ],
   },

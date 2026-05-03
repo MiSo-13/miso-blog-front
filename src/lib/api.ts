@@ -23,6 +23,13 @@ import type {
   HealthResponse,
   LocalRepository,
   LocalRepositoryDefault,
+  OpenAiCostChart,
+  OpenAiCostsQuery,
+  OpenAiEstimate,
+  OpenAiEstimateQuery,
+  OpenAiSummary,
+  OpenAiUsage,
+  OpenAiUsageQuery,
   PublishGithubPagesPayload,
   PublishGithubPagesResult,
   GitHubBranchOption,
@@ -148,4 +155,37 @@ export const api = {
     unwrap<GitHubPagesConnectionTest>(http.post(`/api/publish-targets/${targetId}/test-github-pages`)),
   createDefaultPublishTargets: () =>
     unwrap<PublishTarget[]>(http.post("/api/publish-targets/defaults")),
+  openAiSummary: () => unwrap<OpenAiSummary>(http.get("/api/admin/openai/summary")),
+  openAiCosts: (query: OpenAiCostsQuery) =>
+    unwrap<OpenAiCostChart>(
+      http.get("/api/admin/openai/costs", {
+        params: {
+          startDate: query.startDate || undefined,
+          endDate: query.endDate || undefined,
+          groupBy: query.groupBy || undefined,
+        },
+      }),
+    ),
+  openAiUsage: (query: OpenAiUsageQuery) =>
+    unwrap<OpenAiUsage>(
+      http.get("/api/admin/openai/usage/completions", {
+        params: {
+          startDate: query.startDate || undefined,
+          endDate: query.endDate || undefined,
+          bucketWidth: query.bucketWidth || undefined,
+          groupBy: query.groupBy || undefined,
+        },
+      }),
+    ),
+  openAiEstimate: (query: OpenAiEstimateQuery) =>
+    unwrap<OpenAiEstimate>(
+      http.get("/api/admin/openai/estimate", {
+        params: {
+          model: query.model || undefined,
+          inputTokens: query.inputTokens ?? undefined,
+          cachedInputTokens: query.cachedInputTokens ?? undefined,
+          outputTokens: query.outputTokens ?? undefined,
+        },
+      }),
+    ),
 };

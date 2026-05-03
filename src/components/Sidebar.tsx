@@ -1,5 +1,6 @@
 import {
   BadgeHelp,
+  Activity,
   FileText,
   FolderOpen,
   LayoutDashboard,
@@ -16,6 +17,7 @@ const navItems = [
   { label: "프로젝트", href: "/projects", icon: FolderOpen },
   { label: "초안", href: "/drafts", icon: FileText },
   { label: "글쓰기", href: "/new", icon: PenLine },
+  { label: "OpenAI", href: "/openai", icon: Activity },
   { label: "설정", href: "/settings", icon: Settings },
 ];
 
