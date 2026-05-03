@@ -256,6 +256,18 @@ export type LocalRepository = {
   updatedAt?: string;
 };
 
+export type LocalRepositoryDefault = {
+  name: string;
+  localPath: string;
+  normalizedLocalPath: string;
+  defaultBranch: string;
+  description?: string | null;
+  active: boolean;
+  readable: boolean;
+  registered: boolean;
+  message?: string | null;
+};
+
 export type CreateLocalRepositoryPayload = {
   name: string;
   localPath: string;

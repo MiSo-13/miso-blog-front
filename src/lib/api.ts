@@ -22,6 +22,7 @@ import type {
   ExportVelogResult,
   HealthResponse,
   LocalRepository,
+  LocalRepositoryDefault,
   PublishGithubPagesPayload,
   PublishGithubPagesResult,
   GitHubBranchOption,
@@ -113,6 +114,8 @@ export const api = {
   jobs: () => unwrap<AiJob[]>(http.get("/api/ai-jobs")),
   job: (jobId: number) => unwrap<AiJob>(http.get(`/api/ai-jobs/${jobId}`)),
   retryJob: (jobId: number) => unwrap<AiJob>(http.post(`/api/ai-jobs/${jobId}/retry`)),
+  localRepositoryDefaults: () =>
+    unwrap<LocalRepositoryDefault[]>(http.get("/api/local-repositories/defaults")),
   localRepositories: () => unwrap<LocalRepository[]>(http.get("/api/local-repositories")),
   createLocalRepository: (payload: CreateLocalRepositoryPayload) =>
     unwrap<LocalRepository>(http.post("/api/local-repositories", payload)),
