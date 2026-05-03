@@ -11,6 +11,7 @@ import {
   Link as LinkIcon,
   RefreshCw,
   Send,
+  TestTube2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -29,6 +30,7 @@ import type {
   BlogPostRevisionPayload,
   BlogPostStatus,
   CreateBlogPostPayload,
+  GitHubPagesConnectionTest,
   UpdateBlogPostPayload,
 } from "../types/api";
 
@@ -92,6 +94,8 @@ export default function Editor() {
   const [requirePublishReady, setRequirePublishReady] = useState(false);
   const [markReviewReadyWhenPassed, setMarkReviewReadyWhenPassed] = useState(true);
   const [commitMessage, setCommitMessage] = useState("");
+  const [selectedGithubTargetId, setSelectedGithubTargetId] = useState<number | null>(null);
+  const [githubTargetTestResult, setGithubTargetTestResult] = useState<GitHubPagesConnectionTest | null>(null);
   const [canonicalUrl, setCanonicalUrl] = useState("");
   const [includeCanonicalLink, setIncludeCanonicalLink] = useState(true);
   const [includeSourceNote, setIncludeSourceNote] = useState(true);
@@ -125,6 +129,24 @@ export default function Editor() {
     enabled: blogPostId !== null && Number.isFinite(blogPostId),
     retry: false,
   });
+  const publishTargetsQuery = useQuery({
+    queryKey: ["publish-targets"],
+    queryFn: api.publishTargets,
+    retry: false,
+  });
+
+  const githubTargets = useMemo(
+    () =>
+      (publishTargetsQuery.isSuccess ? publishTargetsQuery.data : []).filter(
+        (target) => target.channel === "GITHUB_PAGES" && target.active,
+      ),
+    [publishTargetsQuery.data, publishTargetsQuery.isSuccess],
+  );
+  const selectedGithubTarget = githubTargets.find((target) => target.id === selectedGithubTargetId) ?? null;
+  const isGithubTargetTested =
+    githubTargetTestResult?.success === true &&
+    selectedGithubTargetId !== null &&
+    githubTargetTestResult.targetId === selectedGithubTargetId;
 
   useEffect(() => {
     if (!blogPostQuery.data) {
@@ -138,6 +160,21 @@ export default function Editor() {
     setSourceNote(blogPostQuery.data.sourceNote ?? "");
     setMarkdown(blogPostQuery.data.contentMarkdown);
   }, [blogPostQuery.data]);
+
+  useEffect(() => {
+    if (githubTargets.length === 0) {
+      setSelectedGithubTargetId(null);
+      setGithubTargetTestResult(null);
+      return;
+    }
+
+    setSelectedGithubTargetId((current) => {
+      if (current !== null && githubTargets.some((target) => target.id === current)) {
+        return current;
+      }
+      return githubTargets.find((target) => target.role === "PRIMARY")?.id ?? githubTargets[0].id;
+    });
+  }, [githubTargets]);
 
   const updateMutation = useMutation({
     mutationFn: (payload: UpdateBlogPostPayload) => api.updateBlogPost(blogPostId!, payload),
@@ -245,6 +282,7 @@ export default function Editor() {
   const githubPublishMutation = useMutation({
     mutationFn: () =>
       api.publishGithubPages(blogPostId!, {
+        targetId: selectedGithubTargetId,
         commitMessage: commitMessage || null,
       }),
     onSuccess: (result) => {
@@ -254,6 +292,11 @@ export default function Editor() {
       queryClient.invalidateQueries({ queryKey: ["blog-post", blogPostId] });
       queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
     },
+  });
+  const githubTargetTestMutation = useMutation({
+    mutationFn: (targetId: number) => api.testGithubPagesTarget(targetId),
+    onSuccess: (result) => setGithubTargetTestResult(result),
+    onError: () => setGithubTargetTestResult(null),
   });
   const velogExportMutation = useMutation({
     mutationFn: () =>
@@ -278,7 +321,12 @@ export default function Editor() {
   const isImproveRunning =
     improveJobQuery.data?.status === "PENDING" ||
     improveJobQuery.data?.status === "RUNNING";
-  const canPublishGithub = blogPostId !== null && currentStatus === "APPROVED";
+  const canTestGithubTarget = selectedGithubTargetId !== null && !githubTargetTestMutation.isPending;
+  const canPublishGithub =
+    blogPostId !== null &&
+    currentStatus === "APPROVED" &&
+    selectedGithubTargetId !== null &&
+    isGithubTargetTested;
   const canExportVelog = blogPostId !== null && (currentStatus === "APPROVED" || currentStatus === "PUBLISHED");
 
   const handleSave = () => {
@@ -610,6 +658,72 @@ export default function Editor() {
                 </div>
 
                 <div className="grid gap-3">
+                  <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                    <div className="grid gap-3">
+                      <label className="space-y-1">
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">GitHub Pages 대상</span>
+                        <select
+                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+                          disabled={githubTargets.length === 0}
+                          value={selectedGithubTargetId ?? ""}
+                          onChange={(event) => {
+                            setSelectedGithubTargetId(event.target.value ? Number(event.target.value) : null);
+                            setGithubTargetTestResult(null);
+                          }}
+                        >
+                          {githubTargets.length === 0 ? <option value="">설정된 대상 없음</option> : null}
+                          {githubTargets.map((target) => (
+                            <option key={target.id} value={target.id}>
+                              {target.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      {selectedGithubTarget ? (
+                        <div className="grid gap-1 text-xs text-gray-500 dark:text-zinc-500">
+                          <p>
+                            <span className="font-bold text-gray-700 dark:text-zinc-300">저장소:</span>{" "}
+                            {selectedGithubTarget.repositoryFullName || "서버 기본값"}
+                          </p>
+                          <p>
+                            <span className="font-bold text-gray-700 dark:text-zinc-300">브랜치:</span>{" "}
+                            {selectedGithubTarget.branchName || "main"}
+                          </p>
+                        </div>
+                      ) : null}
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <button
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                          disabled={!canTestGithubTarget}
+                          title="GitHub Pages 연결 테스트"
+                          type="button"
+                          onClick={() => {
+                            if (selectedGithubTargetId !== null) {
+                              githubTargetTestMutation.mutate(selectedGithubTargetId);
+                            }
+                          }}
+                        >
+                          <TestTube2 size={16} />
+                          {githubTargetTestMutation.isPending ? "테스트 중" : "테스트"}
+                        </button>
+                        <p className="text-xs leading-relaxed text-gray-500 dark:text-zinc-500">
+                          {isGithubTargetTested
+                            ? `연결 확인됨 · ${formatDateTime(githubTargetTestResult?.checkedAt)}`
+                            : "GitHub Pages 발행 전 연결 테스트가 필요합니다."}
+                        </p>
+                      </div>
+                      {githubTargetTestMutation.isError ? (
+                        <p className="rounded-lg bg-white px-3 py-2 text-sm text-gray-500 dark:bg-zinc-950 dark:text-zinc-400">
+                          연결을 확인하지 못했습니다. 설정값과 서버 상태를 확인해 주세요.
+                        </p>
+                      ) : null}
+                      {githubTargetTestResult && !githubTargetTestResult.success ? (
+                        <p className="rounded-lg bg-white px-3 py-2 text-sm text-gray-500 dark:bg-zinc-950 dark:text-zinc-400">
+                          {githubTargetTestResult.message || "연결 테스트가 완료되지 않았습니다."}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
                   <label className="space-y-1">
                     <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">GitHub 커밋 메시지</span>
                     <input
