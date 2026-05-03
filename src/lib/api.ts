@@ -11,6 +11,8 @@ import type {
   BlogPostQualityReviewPayload,
   BlogPostRevisionPayload,
   BlogPostSummary,
+  BlogPostVersion,
+  BlogPostVersionDiff,
   CreateBlogPostPayload,
   CreateBlogPostFromAnalysisPayload,
   CreateGeneralBlogPostPayload,
@@ -54,6 +56,17 @@ export const api = {
   health: () => unwrap<HealthResponse>(http.get("/api/system/health")),
   blogPosts: () => unwrap<BlogPostSummary[]>(http.get("/api/blog-posts")),
   blogPost: (blogPostId: number) => unwrap<BlogPost>(http.get(`/api/blog-posts/${blogPostId}`)),
+  blogPostVersions: (blogPostId: number) =>
+    unwrap<BlogPostVersion[]>(http.get(`/api/blog-posts/${blogPostId}/versions`)),
+  blogPostVersionDiff: (blogPostId: number, fromVersionNo?: number | null, toVersionNo?: number | null) =>
+    unwrap<BlogPostVersionDiff>(
+      http.get(`/api/blog-posts/${blogPostId}/versions/diff`, {
+        params: {
+          fromVersionNo: fromVersionNo ?? undefined,
+          toVersionNo: toVersionNo ?? undefined,
+        },
+      }),
+    ),
   createManualDraft: (payload: CreateBlogPostPayload) =>
     unwrap<BlogPost>(http.post("/api/blog-posts/draft/manual", payload)),
   updateBlogPost: (blogPostId: number, payload: UpdateBlogPostPayload) =>

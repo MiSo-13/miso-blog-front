@@ -38,6 +38,45 @@ export type BlogPost = {
 
 export type BlogPostSummary = Omit<BlogPost, "contentMarkdown" | "sourceNote" | "approvedAt" | "publishedAt">;
 
+export type BlogPostVersion = {
+  id: number;
+  versionNo: number;
+  action: string;
+  title: string;
+  slug?: string | null;
+  summary?: string | null;
+  contentMarkdown: string;
+  tagsJson: string;
+  createdAt: string;
+};
+
+export type BlogPostVersionDiffLine = {
+  type: "INSERT" | "DELETE" | "EQUAL" | string;
+  oldLineNo: number | null;
+  newLineNo: number | null;
+  text: string;
+};
+
+export type BlogPostVersionDiffSection = {
+  fieldName: string;
+  changed: boolean;
+  addedLineCount: number;
+  deletedLineCount: number;
+  lines: BlogPostVersionDiffLine[];
+};
+
+export type BlogPostVersionDiff = {
+  blogPostId: number;
+  fromVersionNo: number;
+  toVersionNo: number;
+  addedLineCount: number;
+  deletedLineCount: number;
+  changed: boolean;
+  fromVersion: BlogPostVersion;
+  toVersion: BlogPostVersion;
+  sections: BlogPostVersionDiffSection[];
+};
+
 export type UpdateBlogPostPayload = {
   title: string;
   slug?: string | null;

@@ -5,6 +5,7 @@ import {
   Code2,
   Copy,
   ExternalLink,
+  History,
   Image,
   Italic,
   Link as LinkIcon,
@@ -18,8 +19,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import AiJobStatusPanel from "../components/AiJobStatusPanel";
 import { api } from "../lib/api";
 import { cn } from "../lib/cn";
-import { countWords, statusLabel } from "../lib/format";
+import { countWords, formatDateTime, statusLabel } from "../lib/format";
 import type {
+  BlogPostVersionDiff,
+  BlogPostVersionDiffLine,
   BlogPost,
   BlogPostQualityImprovePayload,
   BlogPostQualityReviewPayload,
@@ -110,6 +113,18 @@ export default function Editor() {
     enabled: blogPostId !== null && Number.isFinite(blogPostId),
     retry: false,
   });
+  const versionsQuery = useQuery({
+    queryKey: ["blog-post-versions", blogPostId],
+    queryFn: () => api.blogPostVersions(blogPostId!),
+    enabled: blogPostId !== null && Number.isFinite(blogPostId),
+    retry: false,
+  });
+  const versionDiffQuery = useQuery({
+    queryKey: ["blog-post-version-diff", blogPostId],
+    queryFn: () => api.blogPostVersionDiff(blogPostId!),
+    enabled: blogPostId !== null && Number.isFinite(blogPostId),
+    retry: false,
+  });
 
   useEffect(() => {
     if (!blogPostQuery.data) {
@@ -128,6 +143,8 @@ export default function Editor() {
     mutationFn: (payload: UpdateBlogPostPayload) => api.updateBlogPost(blogPostId!, payload),
     onSuccess: (updated) => {
       refreshBlogPostCache(queryClient, blogPostId, updated);
+      queryClient.invalidateQueries({ queryKey: ["blog-post-versions", blogPostId] });
+      queryClient.invalidateQueries({ queryKey: ["blog-post-version-diff", blogPostId] });
     },
   });
   const createMutation = useMutation({
@@ -221,6 +238,8 @@ export default function Editor() {
     },
     onSuccess: (updated) => {
       refreshBlogPostCache(queryClient, blogPostId, updated);
+      queryClient.invalidateQueries({ queryKey: ["blog-post-versions", blogPostId] });
+      queryClient.invalidateQueries({ queryKey: ["blog-post-version-diff", blogPostId] });
     },
   });
   const githubPublishMutation = useMutation({
@@ -551,6 +570,33 @@ export default function Editor() {
                     다음 작업 없음
                   </span>
                 )}
+              </section>
+            ) : null}
+
+            {blogPostId ? (
+              <section className="mb-8 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+                <div className="mb-4 flex items-center gap-2">
+                  <History className="text-blue-600" size={18} />
+                  <h2 className="text-base font-bold text-gray-950 dark:text-white">버전 이력</h2>
+                </div>
+                {versionsQuery.isSuccess && versionsQuery.data.length > 0 ? (
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {versionsQuery.data.slice(0, 8).map((version) => (
+                      <span
+                        className="rounded-lg bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600 dark:bg-zinc-900 dark:text-zinc-300"
+                        key={version.id}
+                        title={formatDateTime(version.createdAt)}
+                      >
+                        v{version.versionNo} · {version.action}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mb-4 rounded-lg border border-dashed border-gray-200 px-3 py-2 text-sm text-gray-500 dark:border-zinc-800 dark:text-zinc-500">
+                    아직 버전 이력이 없습니다.
+                  </p>
+                )}
+                <VersionDiffPanel diff={versionDiffQuery.data} />
               </section>
             ) : null}
 
@@ -958,6 +1004,88 @@ export default function Editor() {
           </div>
         </article>
       </section>
+    </div>
+  );
+}
+
+function fieldLabel(fieldName: string) {
+  const labels: Record<string, string> = {
+    title: "제목",
+    slug: "슬러그",
+    summary: "요약",
+    contentMarkdown: "본문",
+    tags: "태그",
+    tagsJson: "태그",
+  };
+
+  return labels[fieldName] ?? fieldName;
+}
+
+function diffLineClass(line: BlogPostVersionDiffLine) {
+  if (line.type === "INSERT") {
+    return "bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200";
+  }
+  if (line.type === "DELETE") {
+    return "bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-200";
+  }
+  return "bg-gray-50 text-gray-500 dark:bg-zinc-900 dark:text-zinc-500";
+}
+
+function diffLinePrefix(line: BlogPostVersionDiffLine) {
+  if (line.type === "INSERT") {
+    return "+";
+  }
+  if (line.type === "DELETE") {
+    return "-";
+  }
+  return " ";
+}
+
+function VersionDiffPanel({ diff }: { diff?: BlogPostVersionDiff }) {
+  if (!diff) {
+    return null;
+  }
+
+  if (!diff.changed) {
+    return (
+      <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-500 dark:bg-zinc-900 dark:text-zinc-400">
+        최근 버전 간 변경 내용이 없습니다.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-500/10 dark:text-blue-200 sm:grid-cols-3">
+        <p className="font-semibold">
+          v{diff.fromVersionNo} → v{diff.toVersionNo}
+        </p>
+        <p>추가 {diff.addedLineCount}줄</p>
+        <p>삭제 {diff.deletedLineCount}줄</p>
+      </div>
+      {diff.sections
+        .filter((section) => section.changed)
+        .map((section) => (
+          <div className="rounded-lg border border-gray-100 p-3 dark:border-zinc-800" key={section.fieldName}>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-bold text-gray-950 dark:text-white">{fieldLabel(section.fieldName)}</h3>
+              <span className="text-xs text-gray-500 dark:text-zinc-500">
+                +{section.addedLineCount} / -{section.deletedLineCount}
+              </span>
+            </div>
+            <div className="max-h-64 overflow-y-auto rounded-lg border border-gray-100 font-code text-xs dark:border-zinc-800">
+              {section.lines.slice(0, 80).map((line, index) => (
+                <div className={cn("grid grid-cols-[2rem_1fr] gap-2 px-2 py-1", diffLineClass(line))} key={`${section.fieldName}-${index}`}>
+                  <span className="select-none text-center font-bold">{diffLinePrefix(line)}</span>
+                  <span className="whitespace-pre-wrap break-words">{line.text || " "}</span>
+                </div>
+              ))}
+              {section.lines.length > 80 ? (
+                <div className="px-3 py-2 text-xs text-gray-500 dark:text-zinc-500">일부 라인만 표시 중입니다.</div>
+              ) : null}
+            </div>
+          </div>
+        ))}
     </div>
   );
 }
