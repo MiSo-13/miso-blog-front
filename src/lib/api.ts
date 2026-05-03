@@ -8,8 +8,12 @@ import type {
   BlogPostRevisionPayload,
   BlogPostSummary,
   CreateBlogPostPayload,
+  ExportVelogPayload,
+  ExportVelogResult,
   HealthResponse,
   LocalRepository,
+  PublishGithubPagesPayload,
+  PublishGithubPagesResult,
   PublishTarget,
   UpdateBlogPostPayload,
 } from "../types/api";
@@ -55,6 +59,10 @@ export const api = {
     unwrap<BlogPost>(http.post(`/api/blog-posts/${blogPostId}/approve`)),
   markPublished: (blogPostId: number) =>
     unwrap<BlogPost>(http.post(`/api/blog-posts/${blogPostId}/publish`)),
+  publishGithubPages: (blogPostId: number, payload: PublishGithubPagesPayload) =>
+    unwrap<PublishGithubPagesResult>(http.post(`/api/blog-posts/${blogPostId}/publish/github-pages`, payload)),
+  exportVelog: (blogPostId: number, payload: ExportVelogPayload) =>
+    unwrap<ExportVelogResult>(http.post(`/api/blog-posts/${blogPostId}/export/velog`, payload)),
   jobs: () => unwrap<AiJob[]>(http.get("/api/ai-jobs")),
   job: (jobId: number) => unwrap<AiJob>(http.get(`/api/ai-jobs/${jobId}`)),
   localRepositories: () => unwrap<LocalRepository[]>(http.get("/api/local-repositories")),

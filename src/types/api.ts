@@ -84,6 +84,43 @@ export type BlogPostRevisionPayload = {
   markReviewReady?: boolean | null;
 };
 
+export type PublishGithubPagesPayload = {
+  targetId?: number | null;
+  commitMessage?: string | null;
+};
+
+export type PublishGithubPagesResult = {
+  blogPostId: number;
+  status: string;
+  targetId: number | null;
+  repositoryFullName: string;
+  branchName: string;
+  filePath: string;
+  commitSha: string;
+  commitUrl: string;
+  contentUrl: string;
+  expectedPublicUrl: string;
+};
+
+export type ExportVelogPayload = {
+  targetId?: number | null;
+  canonicalUrl?: string | null;
+  includeCanonicalLink?: boolean | null;
+  includeSourceNote?: boolean | null;
+};
+
+export type ExportVelogResult = {
+  blogPostId: number;
+  targetId: number | null;
+  targetName: string | null;
+  title: string;
+  summary: string | null;
+  tags: string[];
+  markdown: string;
+  canonicalUrl: string | null;
+  guide: string;
+};
+
 export type AiJobStatus = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
 
 export type AiJob = {

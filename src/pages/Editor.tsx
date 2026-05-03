@@ -1,5 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bold, ClipboardCheck, Code2, Image, Italic, Link as LinkIcon, RefreshCw, Send } from "lucide-react";
+import {
+  Bold,
+  ClipboardCheck,
+  Code2,
+  Copy,
+  ExternalLink,
+  Image,
+  Italic,
+  Link as LinkIcon,
+  RefreshCw,
+  Send,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -79,6 +90,11 @@ export default function Editor() {
   const [preserveTags, setPreserveTags] = useState(true);
   const [markReviewReadyAfterRevision, setMarkReviewReadyAfterRevision] = useState(true);
   const [revisionJobId, setRevisionJobId] = useState<number | null>(null);
+  const [commitMessage, setCommitMessage] = useState("");
+  const [canonicalUrl, setCanonicalUrl] = useState("");
+  const [includeCanonicalLink, setIncludeCanonicalLink] = useState(true);
+  const [includeSourceNote, setIncludeSourceNote] = useState(true);
+  const [copiedLabel, setCopiedLabel] = useState<string | null>(null);
   const [markdown, setMarkdown] = useState(initialMarkdown);
   const words = useMemo(() => countWords(`${title} ${markdown}`), [markdown, title]);
   const tags = useMemo(
@@ -171,6 +187,27 @@ export default function Editor() {
       refreshBlogPostCache(queryClient, blogPostId, updated);
     },
   });
+  const githubPublishMutation = useMutation({
+    mutationFn: () =>
+      api.publishGithubPages(blogPostId!, {
+        commitMessage: commitMessage || null,
+      }),
+    onSuccess: (result) => {
+      if (result.expectedPublicUrl) {
+        setCanonicalUrl(result.expectedPublicUrl);
+      }
+      queryClient.invalidateQueries({ queryKey: ["blog-post", blogPostId] });
+      queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
+    },
+  });
+  const velogExportMutation = useMutation({
+    mutationFn: () =>
+      api.exportVelog(blogPostId!, {
+        canonicalUrl: canonicalUrl || null,
+        includeCanonicalLink,
+        includeSourceNote,
+      }),
+  });
 
   const currentStatus = blogPostQuery.data?.status;
   const nextStatusAction = currentStatus ? statusAction[currentStatus] : undefined;
@@ -183,6 +220,8 @@ export default function Editor() {
   const isRevisionRunning =
     revisionJobQuery.data?.status === "PENDING" ||
     revisionJobQuery.data?.status === "RUNNING";
+  const canPublishGithub = blogPostId !== null && currentStatus === "APPROVED";
+  const canExportVelog = blogPostId !== null && (currentStatus === "APPROVED" || currentStatus === "PUBLISHED");
 
   const handleSave = () => {
     if (!canSave) {
@@ -249,6 +288,17 @@ export default function Editor() {
       .catch(() => {
         setRevisionJobId(null);
       });
+  };
+
+  const handleCopy = (label: string, value: string) => {
+    if (!value) {
+      return;
+    }
+
+    void navigator.clipboard?.writeText(value).then(() => {
+      setCopiedLabel(label);
+      window.setTimeout(() => setCopiedLabel(null), 1200);
+    });
   };
 
   return (
@@ -408,6 +458,141 @@ export default function Editor() {
                     No next action
                   </span>
                 )}
+              </section>
+            ) : null}
+
+            {blogPostId ? (
+              <section className="mb-8 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+                <div className="mb-4">
+                  <h2 className="text-base font-bold text-gray-950 dark:text-white">Publish & Export</h2>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+                    Publish approved posts to GitHub Pages and prepare copy-ready Velog content.
+                  </p>
+                </div>
+
+                <div className="grid gap-3">
+                  <label className="space-y-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">GitHub commit message</span>
+                    <input
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                      placeholder={`Publish post: ${title}`}
+                      value={commitMessage}
+                      onChange={(event) => setCommitMessage(event.target.value)}
+                    />
+                  </label>
+                  <button
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!canPublishGithub || githubPublishMutation.isPending}
+                    type="button"
+                    onClick={() => githubPublishMutation.mutate()}
+                  >
+                    <ExternalLink size={16} />
+                    {githubPublishMutation.isPending ? "Publishing" : "Publish to GitHub Pages"}
+                  </button>
+
+                  {githubPublishMutation.data ? (
+                    <div className="rounded-lg bg-blue-50 p-3 text-sm leading-6 text-blue-800 dark:bg-blue-500/10 dark:text-blue-200">
+                      <p className="font-bold">{githubPublishMutation.data.repositoryFullName}</p>
+                      <p>{githubPublishMutation.data.filePath}</p>
+                      <div className="mt-2 flex flex-wrap gap-3">
+                        {githubPublishMutation.data.commitUrl ? (
+                          <a className="font-bold underline" href={githubPublishMutation.data.commitUrl} rel="noreferrer" target="_blank">
+                            Commit
+                          </a>
+                        ) : null}
+                        {githubPublishMutation.data.expectedPublicUrl ? (
+                          <a className="font-bold underline" href={githubPublishMutation.data.expectedPublicUrl} rel="noreferrer" target="_blank">
+                            Public URL
+                          </a>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="mt-2 border-t border-gray-100 pt-4 dark:border-zinc-800">
+                    <label className="space-y-1">
+                      <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Canonical URL</span>
+                      <input
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                        placeholder="https://blog.example.com/post.html"
+                        value={canonicalUrl}
+                        onChange={(event) => setCanonicalUrl(event.target.value)}
+                      />
+                    </label>
+                    <div className="my-3 grid gap-2 text-sm text-gray-600 dark:text-zinc-400 sm:grid-cols-2">
+                      <label className="flex items-center gap-2">
+                        <input
+                          checked={includeCanonicalLink}
+                          type="checkbox"
+                          onChange={(event) => setIncludeCanonicalLink(event.target.checked)}
+                        />
+                        Include canonical link
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          checked={includeSourceNote}
+                          type="checkbox"
+                          onChange={(event) => setIncludeSourceNote(event.target.checked)}
+                        />
+                        Include source note
+                      </label>
+                    </div>
+                    <button
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                      disabled={!canExportVelog || velogExportMutation.isPending}
+                      type="button"
+                      onClick={() => velogExportMutation.mutate()}
+                    >
+                      <Copy size={16} />
+                      {velogExportMutation.isPending ? "Exporting" : "Export for Velog"}
+                    </button>
+                  </div>
+
+                  {velogExportMutation.data ? (
+                    <div className="space-y-3 rounded-lg bg-gray-50 p-3 dark:bg-zinc-900">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-bold text-gray-950 dark:text-white">{velogExportMutation.data.title}</p>
+                          <p className="text-xs text-gray-500 dark:text-zinc-500">{velogExportMutation.data.guide}</p>
+                        </div>
+                        <button
+                          className="rounded bg-white px-2 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50 dark:bg-zinc-950 dark:text-blue-300 dark:ring-blue-500/20"
+                          type="button"
+                          onClick={() => handleCopy("title", velogExportMutation.data.title)}
+                        >
+                          {copiedLabel === "title" ? "Copied" : "Title"}
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {velogExportMutation.data.tags.map((tag) => (
+                          <span className="rounded bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" key={tag}>
+                            {tag}
+                          </span>
+                        ))}
+                        <button
+                          className="rounded bg-white px-2 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50 dark:bg-zinc-950 dark:text-blue-300 dark:ring-blue-500/20"
+                          type="button"
+                          onClick={() => handleCopy("tags", velogExportMutation.data.tags.join(", "))}
+                        >
+                          {copiedLabel === "tags" ? "Copied" : "Copy tags"}
+                        </button>
+                      </div>
+                      <textarea
+                        className="min-h-36 w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 font-code text-xs leading-5 text-gray-700 outline-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
+                        readOnly
+                        value={velogExportMutation.data.markdown}
+                      />
+                      <button
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98]"
+                        type="button"
+                        onClick={() => handleCopy("markdown", velogExportMutation.data.markdown)}
+                      >
+                        <Copy size={16} />
+                        {copiedLabel === "markdown" ? "Copied Markdown" : "Copy Markdown"}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </section>
             ) : null}
 
