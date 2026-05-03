@@ -38,6 +38,7 @@ const emptyForm = {
 
 const defaultAnalysisForm = {
   commitLimit: 20,
+  analyzeAllCommits: false,
   focus: "",
   createBlogPost: false,
 };
@@ -302,7 +303,8 @@ function RepositoryCard({ repository }: { repository: GitRepository }) {
   const handleAnalyze = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     analyzeJobMutation.mutate({
-      commitLimit: analysisForm.commitLimit,
+      commitLimit: analysisForm.analyzeAllCommits ? null : analysisForm.commitLimit,
+      analyzeAllCommits: analysisForm.analyzeAllCommits,
       focus: analysisForm.focus.trim() || null,
       createBlogPost: analysisForm.createBlogPost,
     });
@@ -387,7 +389,8 @@ function RepositoryCard({ repository }: { repository: GitRepository }) {
             <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">커밋 수</span>
             <input
               className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
-              max={30}
+              disabled={analysisForm.analyzeAllCommits}
+              max={300}
               min={1}
               type="number"
               value={analysisForm.commitLimit}
@@ -407,14 +410,31 @@ function RepositoryCard({ repository }: { repository: GitRepository }) {
           </label>
         </div>
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400">
-            <input
-              checked={analysisForm.createBlogPost}
-              type="checkbox"
-              onChange={(event) => setAnalysisForm((current) => ({ ...current, createBlogPost: event.target.checked }))}
-            />
-            분석 후 초안 생성
-          </label>
+          <div className="grid gap-2">
+            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400">
+              <input
+                checked={analysisForm.analyzeAllCommits}
+                type="checkbox"
+                onChange={(event) =>
+                  setAnalysisForm((current) => ({ ...current, analyzeAllCommits: event.target.checked }))
+                }
+              />
+              전체 커밋 분석
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400">
+              <input
+                checked={analysisForm.createBlogPost}
+                type="checkbox"
+                onChange={(event) => setAnalysisForm((current) => ({ ...current, createBlogPost: event.target.checked }))}
+              />
+              분석 후 초안 생성
+            </label>
+            {analysisForm.analyzeAllCommits ? (
+              <p className="text-xs leading-5 text-amber-700 dark:text-amber-300">
+                전체 분석은 서버 설정 한도 안에서 오래된 commit까지 조회하므로 시간이 더 걸릴 수 있습니다.
+              </p>
+            ) : null}
+          </div>
           <button
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             disabled={isAnalysisRunning}

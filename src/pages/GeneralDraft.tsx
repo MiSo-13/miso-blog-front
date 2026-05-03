@@ -93,6 +93,7 @@ export default function GeneralDraft() {
   const [batchMetas, setBatchMetas] = useState<Array<{ altText: string; note: string }>>([]);
   const [photoGroupId, setPhotoGroupId] = useState("");
   const [groupAssets, setGroupAssets] = useState<BlogMediaAsset[]>([]);
+  const [selectedGroupAssetIds, setSelectedGroupAssetIds] = useState<number[]>([]);
   const [imagePlacementNotes, setImagePlacementNotes] = useState("");
   const [tone, setTone] = useState("");
   const [audience, setAudience] = useState("");
@@ -134,6 +135,7 @@ export default function GeneralDraft() {
     onSuccess: (result) => {
       setPhotoGroupId(result.uploadGroupId);
       setGroupAssets(result.assets);
+      setSelectedGroupAssetIds(result.assets.map((asset) => asset.id));
       setBatchFiles([]);
       setBatchMetas([]);
       queryClient.invalidateQueries({ queryKey: ["media-images"] });
@@ -170,6 +172,12 @@ export default function GeneralDraft() {
   };
 
   const removePhoto = (index: number) => {
+    if (photos.length === 1) {
+      setPhotos([{ ...emptyPhoto }]);
+      setPhotoFiles({});
+      return;
+    }
+
     setPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index));
     setPhotoFiles((current) => {
       const next = { ...current };
@@ -198,9 +206,27 @@ export default function GeneralDraft() {
     );
   };
 
+  const removeGroupAsset = (assetId: number) => {
+    setSelectedGroupAssetIds((current) => current.filter((id) => id !== assetId));
+  };
+
+  const restoreGroupAssets = () => {
+    setSelectedGroupAssetIds(groupAssets.map((asset) => asset.id));
+  };
+
+  const clearGroupAssets = () => {
+    setPhotoGroupId("");
+    setGroupAssets([]);
+    setSelectedGroupAssetIds([]);
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const groupedUrls = new Set(groupAssets.map((asset) => asset.publicUrl));
+    const selectedGroupAssets = groupAssets.filter((asset) => selectedGroupAssetIds.includes(asset.id));
+    const useWholeGroup = Boolean(
+      photoGroupId && groupAssets.length > 0 && selectedGroupAssets.length === groupAssets.length,
+    );
+    const groupedUrls = new Set(selectedGroupAssets.map((asset) => asset.publicUrl));
     const filteredPhotos = photos
       .map((photo) => ({
         url: photo.url?.trim() || null,
@@ -222,7 +248,8 @@ export default function GeneralDraft() {
           : memo.trim() || null,
       keywords: parseList(keywordsText),
       photos: filteredPhotos,
-      photoGroupId: photoGroupId || null,
+      photoAssetIds: photoGroupId && !useWholeGroup && selectedGroupAssetIds.length > 0 ? selectedGroupAssetIds : null,
+      photoGroupId: useWholeGroup ? photoGroupId : null,
       imagePlacementNotes:
         writingFormat === "NAVER"
           ? appendInstruction(imagePlacementNotes, naverImageInstruction, 300)
@@ -480,20 +507,56 @@ export default function GeneralDraft() {
                       <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-300">사진 묶음</p>
                       <p className="mt-1 break-all text-xs text-gray-500 dark:text-zinc-400">{photoGroupId}</p>
                     </div>
-                    <span className="text-xs font-semibold text-gray-500 dark:text-zinc-400">{groupAssets.length}장</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-zinc-400">
+                        선택 {selectedGroupAssetIds.length} / {groupAssets.length}장
+                      </span>
+                      <button
+                        className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-bold text-gray-600 transition hover:bg-gray-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
+                        title="사진 묶음 전체 복원"
+                        type="button"
+                        onClick={restoreGroupAssets}
+                      >
+                        복원
+                      </button>
+                      <button
+                        className="rounded-lg border border-red-100 bg-white px-2.5 py-1 text-xs font-bold text-red-600 transition hover:bg-red-50 dark:border-red-500/20 dark:bg-zinc-900 dark:text-red-300"
+                        title="사진 묶음 비우기"
+                        type="button"
+                        onClick={clearGroupAssets}
+                      >
+                        비우기
+                      </button>
+                    </div>
                   </div>
                   {groupAssets.length > 0 ? (
                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                       {groupAssets.map((asset) => (
                         <article
-                          className="overflow-hidden rounded-lg border border-gray-200 bg-white text-left transition hover:border-blue-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-500/40"
+                          className={`overflow-hidden rounded-lg border bg-white text-left transition dark:bg-zinc-900 ${
+                            selectedGroupAssetIds.includes(asset.id)
+                              ? "border-blue-200 dark:border-blue-500/40"
+                              : "border-gray-200 opacity-50 dark:border-zinc-800"
+                          }`}
                           key={asset.id}
                         >
-                          <img
-                            alt={asset.altText || asset.originalFilename}
-                            className="h-24 w-full object-cover"
-                            src={resolveAssetUrl(asset.publicUrl)}
-                          />
+                          <div className="relative">
+                            <img
+                              alt={asset.altText || asset.originalFilename}
+                              className="h-24 w-full object-cover"
+                              src={resolveAssetUrl(asset.publicUrl)}
+                            />
+                            {selectedGroupAssetIds.includes(asset.id) ? (
+                              <button
+                                className="absolute right-2 top-2 rounded-lg bg-white/90 p-1.5 text-red-600 shadow-sm transition hover:bg-red-50 dark:bg-zinc-950/90 dark:text-red-300"
+                                title="이 사진 제외"
+                                type="button"
+                                onClick={() => removeGroupAsset(asset.id)}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            ) : null}
+                          </div>
                           <div className="p-2">
                             <p className="truncate text-xs font-semibold text-gray-700 dark:text-zinc-200">
                               {asset.altText || asset.originalFilename}
@@ -508,6 +571,11 @@ export default function GeneralDraft() {
                       ))}
                     </div>
                   ) : null}
+                  {photoGroupId && selectedGroupAssetIds.length === 0 ? (
+                    <p className="mt-3 rounded-lg bg-white px-3 py-2 text-xs leading-5 text-amber-700 dark:bg-zinc-900 dark:text-amber-300">
+                      선택된 묶음 사진이 없습니다. 이 상태로 생성하면 사진 묶음은 글 작성 자료에 포함되지 않습니다.
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -518,8 +586,7 @@ export default function GeneralDraft() {
                   <div className="flex justify-end">
                     <button
                       className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-red-600 dark:hover:bg-zinc-800"
-                      disabled={photos.length === 1}
-                      title="사진 입력 삭제"
+                      title={photos.length === 1 ? "사진 입력 비우기" : "사진 입력 삭제"}
                       type="button"
                       onClick={() => removePhoto(index)}
                     >

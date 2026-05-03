@@ -349,6 +349,7 @@ export type GitAnalysisStatus = "SUCCEEDED" | "FAILED" | "RUNNING" | "PENDING" |
 
 export type AnalyzeGitRepositoryPayload = {
   commitLimit?: number | null;
+  analyzeAllCommits?: boolean | null;
   focus?: string | null;
   createBlogPost?: boolean | null;
 };
