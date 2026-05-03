@@ -164,6 +164,20 @@ export type ExportVelogResult = {
   guide: string;
 };
 
+export type BlogMediaAsset = {
+  id: number;
+  originalFilename: string;
+  storedFilename: string;
+  contentType: string;
+  fileSize: number;
+  relativePath: string;
+  publicUrl: string;
+  altText: string | null;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AiJobStatus = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
 
 export type AiJobFailure = {

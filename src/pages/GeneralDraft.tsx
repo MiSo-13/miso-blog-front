@@ -1,5 +1,5 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlignLeft, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlignLeft, ImagePlus, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -37,6 +37,7 @@ function parseList(value: string) {
 
 export default function GeneralDraft() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [category, setCategory] = useState<GeneralBlogCategory>("DAILY");
   const [titleHint, setTitleHint] = useState("");
   const [placeName, setPlaceName] = useState("");
@@ -45,6 +46,7 @@ export default function GeneralDraft() {
   const [memo, setMemo] = useState("");
   const [keywordsText, setKeywordsText] = useState("");
   const [photos, setPhotos] = useState<GeneralBlogPhotoPayload[]>([{ ...emptyPhoto }]);
+  const [photoFiles, setPhotoFiles] = useState<Record<number, File | null>>({});
   const [imagePlacementNotes, setImagePlacementNotes] = useState("");
   const [tone, setTone] = useState("");
   const [audience, setAudience] = useState("");
@@ -55,6 +57,26 @@ export default function GeneralDraft() {
   const createJobMutation = useMutation({
     mutationFn: (payload: CreateGeneralBlogPostPayload) => api.createGeneralDraftJob(payload),
     onSuccess: (job) => setJobId(job.id),
+  });
+  const mediaImagesQuery = useQuery({
+    queryKey: ["media-images"],
+    queryFn: api.mediaImages,
+    retry: false,
+  });
+  const uploadImageMutation = useMutation({
+    mutationFn: ({ index, file }: { index: number; file: File }) =>
+      api.uploadMediaImage(file, photos[index]?.description || null, photos[index]?.placementNote || null),
+    onSuccess: (asset, variables) => {
+      updatePhoto(variables.index, "url", asset.publicUrl);
+      if (asset.altText && !photos[variables.index]?.description) {
+        updatePhoto(variables.index, "description", asset.altText);
+      }
+      if (asset.note && !photos[variables.index]?.placementNote) {
+        updatePhoto(variables.index, "placementNote", asset.note);
+      }
+      setPhotoFiles((current) => ({ ...current, [variables.index]: null }));
+      queryClient.invalidateQueries({ queryKey: ["media-images"] });
+    },
   });
 
   const jobQuery = useQuery({
@@ -88,6 +110,19 @@ export default function GeneralDraft() {
 
   const removePhoto = (index: number) => {
     setPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index));
+    setPhotoFiles((current) => {
+      const next = { ...current };
+      delete next[index];
+      return next;
+    });
+  };
+
+  const handleUploadPhoto = (index: number) => {
+    const file = photoFiles[index];
+    if (!file) {
+      return;
+    }
+    uploadImageMutation.mutate({ index, file });
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -121,6 +156,7 @@ export default function GeneralDraft() {
     createJobMutation.isPending ||
     jobQuery.data?.status === "PENDING" ||
     jobQuery.data?.status === "RUNNING";
+  const mediaImages = mediaImagesQuery.isSuccess ? mediaImagesQuery.data : [];
 
   return (
     <div className="mx-auto max-w-[980px] pt-8">
@@ -285,6 +321,26 @@ export default function GeneralDraft() {
                     value={photo.url ?? ""}
                     onChange={(event) => updatePhoto(index, "url", event.target.value)}
                   />
+                  <div className="grid gap-2 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3 dark:border-zinc-800 dark:bg-zinc-950 md:grid-cols-[1fr_auto] md:items-center">
+                    <input
+                      accept="image/gif,image/jpeg,image/png,image/webp"
+                      className="text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-2 file:text-xs file:font-bold file:text-gray-700 dark:text-zinc-400 dark:file:bg-zinc-900 dark:file:text-zinc-200"
+                      type="file"
+                      onChange={(event) =>
+                        setPhotoFiles((current) => ({ ...current, [index]: event.target.files?.[0] ?? null }))
+                      }
+                    />
+                    <button
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={!photoFiles[index] || uploadImageMutation.isPending}
+                      title="이미지 업로드"
+                      type="button"
+                      onClick={() => handleUploadPhoto(index)}
+                    >
+                      {uploadImageMutation.isPending ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
+                      업로드
+                    </button>
+                  </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     <input
                       className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
@@ -302,6 +358,46 @@ export default function GeneralDraft() {
                 </div>
               ))}
             </div>
+            {mediaImages.length > 0 ? (
+              <div className="mt-4 rounded-lg border border-gray-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">최근 업로드</h4>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {mediaImages.slice(0, 6).map((asset) => (
+                    <button
+                      className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2 text-left text-xs transition hover:border-blue-200 hover:bg-blue-50 dark:border-zinc-800 dark:hover:border-blue-500/30 dark:hover:bg-blue-500/10"
+                      key={asset.id}
+                      title="첫 번째 빈 사진 입력에 사용"
+                      type="button"
+                      onClick={() => {
+                        const targetIndex = photos.findIndex((item) => !item.url);
+                        const nextIndex = targetIndex >= 0 ? targetIndex : photos.length;
+                        if (targetIndex < 0) {
+                          setPhotos((current) => [
+                            ...current,
+                            {
+                              url: asset.publicUrl,
+                              description: asset.altText || "",
+                              placementNote: asset.note || "",
+                            },
+                          ]);
+                          return;
+                        }
+                        updatePhoto(nextIndex, "url", asset.publicUrl);
+                        if (asset.altText) {
+                          updatePhoto(nextIndex, "description", asset.altText);
+                        }
+                        if (asset.note) {
+                          updatePhoto(nextIndex, "placementNote", asset.note);
+                        }
+                      }}
+                    >
+                      <span className="truncate text-gray-700 dark:text-zinc-200">{asset.altText || asset.originalFilename}</span>
+                      <span className="shrink-0 font-semibold text-blue-600 dark:text-blue-300">사용</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <textarea
               className="mt-3 min-h-16 w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
               placeholder="이미지 배치 관련 추가 요청"

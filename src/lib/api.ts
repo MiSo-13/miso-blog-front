@@ -4,6 +4,7 @@ import type {
   AnalysisReport,
   AnalyzeLocalRepositoryPayload,
   ApiResponse,
+  BlogMediaAsset,
   BlogPost,
   BlogPostQualityImprovePayload,
   BlogPostQualityReview,
@@ -75,6 +76,22 @@ export const api = {
     unwrap<PublishGithubPagesResult>(http.post(`/api/blog-posts/${blogPostId}/publish/github-pages`, payload)),
   exportVelog: (blogPostId: number, payload: ExportVelogPayload) =>
     unwrap<ExportVelogResult>(http.post(`/api/blog-posts/${blogPostId}/export/velog`, payload)),
+  mediaImages: () => unwrap<BlogMediaAsset[]>(http.get("/api/media/images")),
+  uploadMediaImage: (file: File, altText?: string | null, note?: string | null) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (altText) {
+      formData.append("altText", altText);
+    }
+    if (note) {
+      formData.append("note", note);
+    }
+    return unwrap<BlogMediaAsset>(
+      http.post("/api/media/images", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      }),
+    );
+  },
   jobs: () => unwrap<AiJob[]>(http.get("/api/ai-jobs")),
   job: (jobId: number) => unwrap<AiJob>(http.get(`/api/ai-jobs/${jobId}`)),
   retryJob: (jobId: number) => unwrap<AiJob>(http.post(`/api/ai-jobs/${jobId}/retry`)),
