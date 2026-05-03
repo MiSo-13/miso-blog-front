@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   LogOut,
   PenLine,
+  ScrollText,
   Settings,
   Sparkles,
 } from "lucide-react";
@@ -17,6 +18,7 @@ const navItems = [
   { label: "프로젝트", href: "/projects", icon: FolderOpen },
   { label: "초안", href: "/drafts", icon: FileText },
   { label: "글쓰기", href: "/new", icon: PenLine },
+  { label: "AI 작업", href: "/jobs", icon: ScrollText },
   { label: "OpenAI", href: "/openai", icon: Activity },
   { label: "설정", href: "/settings", icon: Settings },
 ];

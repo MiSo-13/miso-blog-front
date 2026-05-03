@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import App from "./App";
+import AiJobs from "./pages/AiJobs";
 import Dashboard from "./pages/Dashboard";
 import ContentPath from "./pages/ContentPath";
 import Editor from "./pages/Editor";
@@ -34,6 +35,7 @@ const router = createBrowserRouter([
       { path: "editor", element: <Editor /> },
       { path: "drafts", element: <Drafts /> },
       { path: "drafts/:blogPostId", element: <Editor /> },
+      { path: "jobs", element: <AiJobs /> },
       { path: "openai", element: <OpenAiOperations /> },
       { path: "settings", element: <Settings /> },
     ],
