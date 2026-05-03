@@ -4,7 +4,7 @@ import TopBar from "./components/TopBar";
 
 export default function App() {
   const location = useLocation();
-  const isEditor = location.pathname === "/editor";
+  const isEditor = location.pathname === "/editor" || /^\/drafts\/\d+$/.test(location.pathname);
   const isContentPath = location.pathname === "/new";
   const hasSidebar = !isContentPath;
 

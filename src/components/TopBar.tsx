@@ -6,7 +6,7 @@ import { cn } from "../lib/cn";
 export default function TopBar() {
   const [darkMode, setDarkMode] = useState(false);
   const location = useLocation();
-  const isEditor = location.pathname === "/editor";
+  const isEditor = location.pathname === "/editor" || /^\/drafts\/\d+$/.test(location.pathname);
   const isContentPath = location.pathname === "/new";
 
   useEffect(() => {

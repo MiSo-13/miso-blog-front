@@ -28,6 +28,7 @@ const router = createBrowserRouter([
       { path: "new", element: <ContentPath /> },
       { path: "editor", element: <Editor /> },
       { path: "drafts", element: <Drafts /> },
+      { path: "drafts/:blogPostId", element: <Editor /> },
       { path: "settings", element: <Settings /> },
     ],
   },

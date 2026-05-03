@@ -38,6 +38,15 @@ export type BlogPost = {
 
 export type BlogPostSummary = Omit<BlogPost, "contentMarkdown" | "sourceNote" | "approvedAt" | "publishedAt">;
 
+export type UpdateBlogPostPayload = {
+  title: string;
+  slug?: string | null;
+  summary?: string | null;
+  contentMarkdown: string;
+  tags: string[];
+  sourceNote?: string | null;
+};
+
 export type AiJobStatus = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
 
 export type AiJob = {

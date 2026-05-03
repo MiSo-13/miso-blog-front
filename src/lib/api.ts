@@ -7,6 +7,7 @@ import type {
   HealthResponse,
   LocalRepository,
   PublishTarget,
+  UpdateBlogPostPayload,
 } from "../types/api";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8010";
@@ -36,6 +37,8 @@ export const api = {
   health: () => unwrap<HealthResponse>(http.get("/api/system/health")),
   blogPosts: () => unwrap<BlogPostSummary[]>(http.get("/api/blog-posts")),
   blogPost: (blogPostId: number) => unwrap<BlogPost>(http.get(`/api/blog-posts/${blogPostId}`)),
+  updateBlogPost: (blogPostId: number, payload: UpdateBlogPostPayload) =>
+    unwrap<BlogPost>(http.patch(`/api/blog-posts/${blogPostId}`, payload)),
   jobs: () => unwrap<AiJob[]>(http.get("/api/ai-jobs")),
   job: (jobId: number) => unwrap<AiJob>(http.get(`/api/ai-jobs/${jobId}`)),
   localRepositories: () => unwrap<LocalRepository[]>(http.get("/api/local-repositories")),

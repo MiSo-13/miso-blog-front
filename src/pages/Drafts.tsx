@@ -93,6 +93,9 @@ export default function Drafts() {
               </div>
               <div className="flex items-center justify-between border-t border-gray-100 pt-4 text-xs text-gray-500 dark:border-zinc-800 dark:text-zinc-500">
                 <span>v{post.currentVersionNo}</span>
+                <Link className="font-bold text-blue-600 hover:underline dark:text-blue-300" to={`/drafts/${post.id}`}>
+                  Open editor
+                </Link>
                 <span>{readingWordCount(post.summary)} summary words</span>
               </div>
             </article>
