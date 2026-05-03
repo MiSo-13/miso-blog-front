@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
+import ToastViewport from "./components/ToastViewport";
 
 export default function App() {
   const location = useLocation();
@@ -12,6 +13,7 @@ export default function App() {
     <div className="min-h-screen bg-white text-gray-900 dark:bg-zinc-950 dark:text-zinc-50">
       {hasSidebar ? <Sidebar /> : null}
       <TopBar />
+      <ToastViewport />
       <main className={`min-h-screen pt-16 ${hasSidebar ? "pl-0 lg:pl-64" : ""}`}>
         <div
           className={

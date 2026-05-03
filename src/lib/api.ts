@@ -1,4 +1,6 @@
 import axios from "axios";
+import type { AxiosResponse } from "axios";
+import { notify } from "./notifications";
 import type {
   AiJob,
   AnalysisReport,
@@ -48,6 +50,56 @@ import type {
   WriteBlogPostFromAnalysisPayload,
 } from "../types/api";
 
+type ApiFailurePayload = {
+  success: false;
+  code?: string;
+  message?: string;
+  occurredAt?: string;
+  failure?: {
+    message?: string | null;
+    detailMessage?: string | null;
+    actionGuide?: string | null;
+    retryable?: boolean | null;
+  } | null;
+};
+
+export class ApiClientError extends Error {
+  code?: string;
+  status?: number;
+  detailMessage?: string;
+  actionGuide?: string;
+  retryable?: boolean;
+  dedupeKey: string;
+  notified = false;
+
+  constructor({
+    message,
+    code,
+    status,
+    detailMessage,
+    actionGuide,
+    retryable,
+    dedupeKey,
+  }: {
+    message: string;
+    code?: string;
+    status?: number;
+    detailMessage?: string;
+    actionGuide?: string;
+    retryable?: boolean;
+    dedupeKey: string;
+  }) {
+    super(message);
+    this.name = "ApiClientError";
+    this.code = code;
+    this.status = status;
+    this.detailMessage = detailMessage;
+    this.actionGuide = actionGuide;
+    this.retryable = retryable;
+    this.dedupeKey = dedupeKey;
+  }
+}
+
 function resolveApiBaseUrl() {
   const configuredBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
 
@@ -71,18 +123,212 @@ export const http = axios.create({
   },
 });
 
-async function unwrap<T>(request: Promise<{ data: ApiResponse<T> | T }>): Promise<T> {
-  const response = await request;
-  const payload = response.data;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
-  if (payload && typeof payload === "object" && "success" in payload) {
-    if (payload.success) {
-      return payload.data;
-    }
-    throw new Error(payload.message || "요청에 실패했습니다");
+function isApiClientError(error: unknown): error is ApiClientError {
+  return error instanceof ApiClientError;
+}
+
+function isFailurePayload(payload: unknown): payload is ApiFailurePayload {
+  return isRecord(payload) && payload.success === false;
+}
+
+function normalizeUrl(url?: string) {
+  return url?.replace(/\?.*$/, "") ?? "unknown";
+}
+
+function createFailureError(payload: ApiFailurePayload, response: AxiosResponse<unknown>) {
+  const failure = payload.failure ?? undefined;
+
+  return new ApiClientError({
+    message: failure?.message || payload.message || "요청을 처리하지 못했습니다.",
+    code: payload.code,
+    status: response.status,
+    detailMessage: failure?.detailMessage ?? undefined,
+    actionGuide: failure?.actionGuide ?? undefined,
+    retryable: failure?.retryable ?? undefined,
+    dedupeKey: `${payload.code ?? response.status}:${normalizeUrl(response.config.url)}`,
+  });
+}
+
+function normalizeError(error: unknown): ApiClientError {
+  if (isApiClientError(error)) {
+    return error;
   }
 
-  return payload as T;
+  if (axios.isAxiosError(error)) {
+    const response = error.response;
+    const payload = response?.data;
+
+    if (isFailurePayload(payload) && response) {
+      return createFailureError(payload, response);
+    }
+
+    if (!response) {
+      return new ApiClientError({
+        message: "서버에 연결할 수 없습니다.",
+        detailMessage: "네트워크 연결이 끊겼거나 서버가 아직 준비되지 않았습니다.",
+        actionGuide: "서버 컨테이너와 배포 프록시 상태를 확인한 뒤 다시 시도해 주세요.",
+        dedupeKey: "server-unreachable",
+      });
+    }
+
+    return new ApiClientError({
+      message: `서버 요청이 실패했습니다. (${response.status})`,
+      detailMessage: typeof payload === "string" ? payload : undefined,
+      actionGuide: response.status >= 500 ? "서버 로그를 확인한 뒤 잠시 후 다시 시도해 주세요." : undefined,
+      status: response.status,
+      dedupeKey: `${response.status}:${normalizeUrl(response.config.url)}`,
+    });
+  }
+
+  return new ApiClientError({
+    message: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.",
+    dedupeKey: "unknown-api-error",
+  });
+}
+
+function successTitle(method: string, url: string) {
+  if (method === "PATCH" && /\/api\/blog-posts\/\d+$/.test(url)) {
+    return "글이 저장되었습니다.";
+  }
+  if (method === "POST" && /\/api\/blog-posts\/draft\/manual$/.test(url)) {
+    return "초안이 생성되었습니다.";
+  }
+  if (method === "POST" && /\/quality-review\/ai$/.test(url)) {
+    return "품질 검토가 완료되었습니다.";
+  }
+  if (method === "POST" && /\/revise\/ai$/.test(url)) {
+    return "AI 수정 작업을 시작했습니다.";
+  }
+  if (method === "POST" && /\/quality-improve\/ai$/.test(url)) {
+    return "자동 개선 작업을 시작했습니다.";
+  }
+  if (method === "POST" && /\/draft\/ai-general$/.test(url)) {
+    return "AI 초안 생성 작업을 시작했습니다.";
+  }
+  if (method === "POST" && /\/review-ready$/.test(url)) {
+    return "검토 요청 상태로 변경했습니다.";
+  }
+  if (method === "POST" && /\/approve$/.test(url)) {
+    return "글을 승인했습니다.";
+  }
+  if (method === "POST" && /\/publish$/.test(url)) {
+    return "발행 완료 상태로 변경했습니다.";
+  }
+  if (method === "POST" && /\/publish\/github-pages$/.test(url)) {
+    return "GitHub Pages 발행이 완료되었습니다.";
+  }
+  if (method === "POST" && /\/export\/velog$/.test(url)) {
+    return "Velog 내보내기가 준비되었습니다.";
+  }
+  if (method === "POST" && /\/api\/media\/images$/.test(url)) {
+    return "이미지를 업로드했습니다.";
+  }
+  if (method === "POST" && /\/api\/ai-jobs\/\d+\/retry$/.test(url)) {
+    return "작업을 다시 시작했습니다.";
+  }
+  if (method === "POST" && /\/api\/local-repositories$/.test(url)) {
+    return "로컬 저장소를 등록했습니다.";
+  }
+  if (method === "PATCH" && /\/api\/local-repositories\/\d+$/.test(url)) {
+    return "로컬 저장소 설정을 저장했습니다.";
+  }
+  if (method === "POST" && /\/api\/local-repositories\/\d+\/analyze$/.test(url)) {
+    return "로컬 저장소 분석이 완료되었습니다.";
+  }
+  if (method === "POST" && /\/api\/local-repositories\/analysis-reports\/\d+\/blog-post$/.test(url)) {
+    return "분석 기반 초안을 만들었습니다.";
+  }
+  if (method === "POST" && /\/api\/local-repositories\/analysis-reports\/\d+\/write-blog-post$/.test(url)) {
+    return "분석 기반 글 작성을 완료했습니다.";
+  }
+  if (method === "POST" && /\/api\/git-repositories$/.test(url)) {
+    return "GitHub 저장소를 등록했습니다.";
+  }
+  if (method === "PATCH" && /\/api\/git-repositories\/\d+$/.test(url)) {
+    return "GitHub 저장소 설정을 저장했습니다.";
+  }
+  if (method === "POST" && /\/api\/git-repositories\/\d+\/analyze$/.test(url)) {
+    return "GitHub 저장소 분석이 완료되었습니다.";
+  }
+  if (method === "POST" && /\/api\/git-repositories\/analysis-reports\/\d+\/blog-post$/.test(url)) {
+    return "GitHub 분석 기반 초안을 만들었습니다.";
+  }
+  if (method === "POST" && /\/api\/git-repositories\/analysis-reports\/\d+\/write-blog-post$/.test(url)) {
+    return "GitHub 분석 기반 글 작성을 완료했습니다.";
+  }
+  if (method === "POST" && /\/api\/publish-targets\/defaults$/.test(url)) {
+    return "기본 발행 대상을 생성했습니다.";
+  }
+  if (method === "POST" && /\/api\/publish-targets$/.test(url)) {
+    return "발행 대상을 추가했습니다.";
+  }
+  if (method === "PATCH" && /\/api\/publish-targets\/\d+$/.test(url)) {
+    return "발행 대상 설정을 저장했습니다.";
+  }
+  if (method === "POST" && /\/api\/publish-targets\/\d+\/test-github-pages$/.test(url)) {
+    return "GitHub Pages 연결을 확인했습니다.";
+  }
+
+  return method === "POST" ? "요청을 완료했습니다." : "변경 사항을 저장했습니다.";
+}
+
+function notifySuccess(response: AxiosResponse<unknown>) {
+  const method = response.config.method?.toUpperCase() ?? "GET";
+
+  if (method === "GET") {
+    return;
+  }
+
+  const url = normalizeUrl(response.config.url);
+
+  notify({
+    tone: "success",
+    title: successTitle(method, url),
+    dedupeKey: `success:${method}:${url}`,
+    dedupeMs: 800,
+  });
+}
+
+function notifyError(error: ApiClientError) {
+  if (error.notified) {
+    return;
+  }
+
+  error.notified = true;
+  notify({
+    tone: "error",
+    title: error.message,
+    message: error.detailMessage,
+    actionGuide: error.actionGuide,
+    dedupeKey: error.dedupeKey,
+    dedupeMs: error.dedupeKey === "server-unreachable" ? 8000 : 3000,
+  });
+}
+
+async function unwrap<T>(request: Promise<AxiosResponse<ApiResponse<T> | T>>): Promise<T> {
+  try {
+    const response = await request;
+    const payload = response.data;
+
+    if (payload && typeof payload === "object" && "success" in payload) {
+      if (payload.success) {
+        notifySuccess(response as AxiosResponse<unknown>);
+        return payload.data;
+      }
+      throw createFailureError(payload, response as AxiosResponse<unknown>);
+    }
+
+    notifySuccess(response as AxiosResponse<unknown>);
+    return payload as T;
+  } catch (error) {
+    const normalizedError = normalizeError(error);
+    notifyError(normalizedError);
+    throw normalizedError;
+  }
 }
 
 export const api = {
