@@ -10,6 +10,7 @@ import Editor from "./pages/Editor";
 import Drafts from "./pages/Drafts";
 import GeneralDraft from "./pages/GeneralDraft";
 import GitRepositories from "./pages/GitRepositories";
+import MediaLibrary from "./pages/MediaLibrary";
 import OpenAiOperations from "./pages/OpenAiOperations";
 import Projects from "./pages/Projects";
 import Settings from "./pages/Settings";
@@ -37,6 +38,7 @@ const router = createBrowserRouter([
       { path: "editor", element: <Editor /> },
       { path: "drafts", element: <Drafts /> },
       { path: "drafts/:blogPostId", element: <Editor /> },
+      { path: "media", element: <MediaLibrary /> },
       { path: "jobs", element: <AiJobs /> },
       { path: "openai", element: <OpenAiOperations /> },
       { path: "settings", element: <Settings /> },
