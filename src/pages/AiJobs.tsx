@@ -16,6 +16,7 @@ const statusTone: Record<AiJobStatus, string> = {
 
 const jobTypeLabel: Record<string, string> = {
   GENERAL_BLOG_DRAFT: "일반 블로그 초안",
+  GIT_REPOSITORY_ANALYSIS: "GitHub 저장소 분석",
   BLOG_POST_REVISION: "AI 추가 수정",
   BLOG_POST_QUALITY_IMPROVE: "자동 품질 개선",
 };

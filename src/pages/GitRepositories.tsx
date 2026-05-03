@@ -15,6 +15,7 @@ import {
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import AiJobStatusPanel from "../components/AiJobStatusPanel";
 import { EmptyState, Notice } from "../components/StateBlock";
 import { api } from "../lib/api";
 import { formatDateTime, statusLabel } from "../lib/format";
@@ -40,6 +41,18 @@ const defaultAnalysisForm = {
   focus: "",
   createBlogPost: false,
 };
+
+function parseGitAnalysisReport(value: string | null): GitAnalysisReport | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value) as GitAnalysisReport;
+  } catch {
+    return null;
+  }
+}
 
 export default function GitRepositories() {
   const queryClient = useQueryClient();
@@ -181,6 +194,8 @@ function RepositoryCard({ repository }: { repository: GitRepository }) {
   });
   const [analysisForm, setAnalysisForm] = useState(defaultAnalysisForm);
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
+  const [analysisJobId, setAnalysisJobId] = useState<number | null>(null);
+  const [analysisJobReport, setAnalysisJobReport] = useState<GitAnalysisReport | null>(null);
 
   const reportsQuery = useQuery({
     queryKey: ["git-repository-reports", repository.id],
@@ -194,12 +209,28 @@ function RepositoryCard({ repository }: { repository: GitRepository }) {
       queryClient.invalidateQueries({ queryKey: ["git-repositories"] });
     },
   });
-  const analyzeMutation = useMutation({
-    mutationFn: (payload: AnalyzeGitRepositoryPayload) => api.analyzeGitRepository(repository.id, payload),
-    onSuccess: (report) => {
-      setSelectedReportId(report.id);
-      queryClient.invalidateQueries({ queryKey: ["git-repository-reports", repository.id] });
-      queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
+  const analyzeJobMutation = useMutation({
+    mutationFn: (payload: AnalyzeGitRepositoryPayload) => api.createGitRepositoryAnalysisJob(repository.id, payload),
+    onSuccess: (job) => {
+      setAnalysisJobId(job.id);
+      setAnalysisJobReport(null);
+    },
+  });
+  const analysisJobQuery = useQuery({
+    queryKey: ["ai-job", analysisJobId],
+    queryFn: () => api.job(analysisJobId!),
+    enabled: analysisJobId !== null,
+    retry: false,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === "PENDING" || status === "RUNNING" ? 2500 : false;
+    },
+  });
+  const retryAnalysisJobMutation = useMutation({
+    mutationFn: (jobId: number) => api.retryJob(jobId),
+    onSuccess: (job) => {
+      setAnalysisJobId(job.id);
+      setAnalysisJobReport(null);
     },
   });
   const createDraftMutation = useMutation({
@@ -229,11 +260,34 @@ function RepositoryCard({ repository }: { repository: GitRepository }) {
     });
   }, [repository]);
 
-  const reports = useMemo(
-    () => (reportsQuery.isSuccess ? [...reportsQuery.data].sort((a, b) => b.id - a.id) : []),
-    [reportsQuery.data, reportsQuery.isSuccess],
-  );
+  useEffect(() => {
+    const job = analysisJobQuery.data;
+    if (job?.status !== "SUCCEEDED") {
+      return;
+    }
+
+    const report = parseGitAnalysisReport(job.resultJson);
+    if (report) {
+      setAnalysisJobReport(report);
+      setSelectedReportId(report.id);
+      queryClient.invalidateQueries({ queryKey: ["git-repository-reports", repository.id] });
+      queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
+    }
+  }, [analysisJobQuery.data, queryClient, repository.id]);
+
+  const reports = useMemo(() => {
+    const savedReports = reportsQuery.isSuccess ? [...reportsQuery.data].sort((a, b) => b.id - a.id) : [];
+    if (!analysisJobReport || savedReports.some((report) => report.id === analysisJobReport.id)) {
+      return savedReports;
+    }
+
+    return [analysisJobReport, ...savedReports];
+  }, [analysisJobReport, reportsQuery.data, reportsQuery.isSuccess]);
   const selectedReport = reports.find((report) => report.id === selectedReportId) ?? reports[0] ?? null;
+  const isAnalysisRunning =
+    analyzeJobMutation.isPending ||
+    analysisJobQuery.data?.status === "PENDING" ||
+    analysisJobQuery.data?.status === "RUNNING";
 
   const handleEditSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -247,7 +301,7 @@ function RepositoryCard({ repository }: { repository: GitRepository }) {
 
   const handleAnalyze = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    analyzeMutation.mutate({
+    analyzeJobMutation.mutate({
       commitLimit: analysisForm.commitLimit,
       focus: analysisForm.focus.trim() || null,
       createBlogPost: analysisForm.createBlogPost,
@@ -323,6 +377,11 @@ function RepositoryCard({ repository }: { repository: GitRepository }) {
       ) : null}
 
       <form className="grid gap-4 border-t border-gray-100 pt-5 dark:border-zinc-800" onSubmit={handleAnalyze}>
+        <Notice
+          description="GitHub API 조회와 OpenAI 분석은 1분 이상 걸릴 수 있어 비동기 작업으로 실행합니다. 화면을 닫아도 AI 작업 화면에서 진행 상태를 다시 확인할 수 있습니다."
+          icon={ShieldAlert}
+          tone="gray"
+        />
         <div className="grid gap-3 sm:grid-cols-[140px_1fr]">
           <label className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">커밋 수</span>
@@ -358,15 +417,28 @@ function RepositoryCard({ repository }: { repository: GitRepository }) {
           </label>
           <button
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={analyzeMutation.isPending}
+            disabled={isAnalysisRunning}
             title="GitHub 저장소 분석"
             type="submit"
           >
             <Sparkles size={17} />
-            {analyzeMutation.isPending ? "분석 중" : "분석"}
+            {isAnalysisRunning ? "분석 중" : "분석"}
           </button>
         </div>
       </form>
+
+      <div className="mt-4">
+        <AiJobStatusPanel
+          job={analysisJobQuery.data}
+          isRetrying={retryAnalysisJobMutation.isPending}
+          title="GitHub 저장소 분석"
+          onRetry={() => {
+            if (analysisJobQuery.data?.retryable) {
+              retryAnalysisJobMutation.mutate(analysisJobQuery.data.id);
+            }
+          }}
+        />
+      </div>
 
       <ReportPanel
         report={selectedReport}

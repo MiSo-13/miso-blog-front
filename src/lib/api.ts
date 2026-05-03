@@ -258,6 +258,9 @@ function successTitle(method: string, url: string) {
   if (method === "POST" && /\/api\/git-repositories\/\d+\/analyze$/.test(url)) {
     return "GitHub 저장소 분석이 완료되었습니다.";
   }
+  if (method === "POST" && /\/api\/ai-jobs\/git-repositories\/\d+\/analyze$/.test(url)) {
+    return "GitHub 저장소 분석 작업을 시작했습니다.";
+  }
   if (method === "POST" && /\/api\/git-repositories\/analysis-reports\/\d+\/blog-post$/.test(url)) {
     return "GitHub 분석 기반 초안을 만들었습니다.";
   }
@@ -362,6 +365,8 @@ export const api = {
     unwrap<AiJob>(http.post(`/api/ai-jobs/blog-posts/${blogPostId}/quality-improve/ai`, payload)),
   createGeneralDraftJob: (payload: CreateGeneralBlogPostPayload) =>
     unwrap<AiJob>(http.post("/api/ai-jobs/blog-posts/draft/ai-general", payload)),
+  createGitRepositoryAnalysisJob: (repositoryId: number, payload: AnalyzeGitRepositoryPayload) =>
+    unwrap<AiJob>(http.post(`/api/ai-jobs/git-repositories/${repositoryId}/analyze`, payload)),
   markReviewReady: (blogPostId: number) =>
     unwrap<BlogPost>(http.post(`/api/blog-posts/${blogPostId}/review-ready`)),
   approveBlogPost: (blogPostId: number) =>
