@@ -4,7 +4,7 @@ import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { formatDateTime } from "../lib/format";
-import type { GitHubPagesConnectionTest, PublishTarget, UpdatePublishTargetPayload } from "../types/api";
+import type { CreatePublishTargetPayload, GitHubPagesConnectionTest, PublishTarget, UpdatePublishTargetPayload } from "../types/api";
 
 const channelIcon = {
   GITHUB_PAGES: Github,
@@ -20,6 +20,22 @@ type TargetForm = {
   contentRootPath: string;
   customDomain: string;
   active: boolean;
+};
+
+type CreateTargetForm = TargetForm & {
+  channel: PublishTarget["channel"];
+};
+
+const emptyCreateForm: CreateTargetForm = {
+  channel: "GITHUB_PAGES",
+  role: "PRIMARY",
+  name: "",
+  baseUrl: "",
+  repositoryFullName: "",
+  branchName: "",
+  contentRootPath: "_posts",
+  customDomain: "",
+  active: true,
 };
 
 function toForm(target: PublishTarget): TargetForm {
@@ -45,6 +61,13 @@ function toPayload(form: TargetForm): UpdatePublishTargetPayload {
     contentRootPath: form.contentRootPath.trim() || null,
     customDomain: form.customDomain.trim() || null,
     active: form.active,
+  };
+}
+
+function toCreatePayload(form: CreateTargetForm): CreatePublishTargetPayload {
+  return {
+    channel: form.channel,
+    ...toPayload(form),
   };
 }
 
@@ -77,6 +100,7 @@ export default function Settings() {
     },
   });
   const targets = targetsQuery.isSuccess ? targetsQuery.data : [];
+  const repositories = repositoriesQuery.isSuccess ? repositoriesQuery.data : [];
 
   return (
     <div className="pt-8">
@@ -117,6 +141,8 @@ export default function Settings() {
         </section>
       ) : null}
 
+      <CreatePublishTargetSection repositories={repositories} />
+
       {targets.length === 0 ? (
         <section className="rounded-lg border border-gray-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
           <Globe2 className="mx-auto mb-4 text-blue-600" size={34} />
@@ -130,13 +156,201 @@ export default function Settings() {
           {targets.map((target) => (
             <PublishTargetCard
               key={target.id}
-              repositories={repositoriesQuery.isSuccess ? repositoriesQuery.data : []}
+              repositories={repositories}
               target={target}
             />
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+function CreatePublishTargetSection({
+  repositories,
+}: {
+  repositories: Array<{ fullName: string; defaultBranch: string; githubPagesCandidate: boolean }>;
+}) {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState<CreateTargetForm>(emptyCreateForm);
+  const branchesQuery = useQuery({
+    queryKey: ["github-branch-options", "create", form.repositoryFullName],
+    queryFn: () => api.githubBranchOptions(form.repositoryFullName),
+    enabled: form.channel === "GITHUB_PAGES" && form.repositoryFullName.trim().length > 0,
+    retry: false,
+  });
+  const createMutation = useMutation({
+    mutationFn: (payload: CreatePublishTargetPayload) => api.createPublishTarget(payload),
+    onSuccess: () => {
+      setForm(emptyCreateForm);
+      queryClient.invalidateQueries({ queryKey: ["publish-targets"] });
+      queryClient.invalidateQueries({ queryKey: ["publish-strategy"] });
+    },
+  });
+
+  const updateField = (field: keyof CreateTargetForm, value: string | boolean) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const updateChannel = (channel: PublishTarget["channel"]) => {
+    setForm((current) => ({
+      ...current,
+      channel,
+      repositoryFullName: channel === "GITHUB_PAGES" ? current.repositoryFullName : "",
+      branchName: channel === "GITHUB_PAGES" ? current.branchName : "",
+      contentRootPath: channel === "GITHUB_PAGES" ? current.contentRootPath || "_posts" : "",
+      customDomain: channel === "GITHUB_PAGES" ? current.customDomain : "",
+    }));
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!form.name.trim()) {
+      return;
+    }
+
+    createMutation.mutate(toCreatePayload(form));
+  };
+
+  return (
+    <section className="mb-6 rounded-lg border border-gray-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="mb-5 flex items-center gap-3">
+        <PlusCircle className="text-blue-600" size={22} />
+        <div>
+          <h2 className="text-lg font-bold text-gray-950 dark:text-white">발행 대상 추가</h2>
+          <p className="mt-1 text-sm text-gray-600 dark:text-zinc-400">GitHub Pages 또는 Velog 발행 대상을 직접 등록합니다.</p>
+        </div>
+      </div>
+      <form className="grid gap-4" onSubmit={handleSubmit}>
+        <div className="grid gap-4 md:grid-cols-3">
+          <label className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">채널</span>
+            <select
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+              value={form.channel}
+              onChange={(event) => updateChannel(event.target.value as PublishTarget["channel"])}
+            >
+              <option value="GITHUB_PAGES">GitHub Pages</option>
+              <option value="VELOG">Velog</option>
+            </select>
+          </label>
+          <label className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">이름</span>
+            <input
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+              value={form.name}
+              onChange={(event) => updateField("name", event.target.value)}
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">역할</span>
+            <select
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+              value={form.role}
+              onChange={(event) => updateField("role", event.target.value)}
+            >
+              <option value="PRIMARY">주 대상</option>
+              <option value="SECONDARY">보조 대상</option>
+            </select>
+          </label>
+        </div>
+
+        {form.channel === "GITHUB_PAGES" ? (
+          <>
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">GitHub 저장소</span>
+              <input
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+                list="create-publish-repositories"
+                value={form.repositoryFullName}
+                onChange={(event) => {
+                  const nextRepository = event.target.value;
+                  const repository = repositories.find((item) => item.fullName === nextRepository);
+                  setForm((current) => ({
+                    ...current,
+                    repositoryFullName: nextRepository,
+                    branchName: repository?.defaultBranch ?? current.branchName,
+                  }));
+                }}
+              />
+              <datalist id="create-publish-repositories">
+                {repositories.map((repository) => (
+                  <option key={repository.fullName} value={repository.fullName}>
+                    {repository.githubPagesCandidate ? "GitHub Pages 후보" : repository.defaultBranch}
+                  </option>
+                ))}
+              </datalist>
+            </label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">브랜치</span>
+                <input
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+                  list="create-publish-branches"
+                  value={form.branchName}
+                  onChange={(event) => updateField("branchName", event.target.value)}
+                />
+                <datalist id="create-publish-branches">
+                  {(branchesQuery.isSuccess ? branchesQuery.data : []).map((branch) => (
+                    <option key={branch.name} value={branch.name}>
+                      {branch.protectedBranch ? "보호 브랜치" : branch.commitSha}
+                    </option>
+                  ))}
+                </datalist>
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">콘텐츠 경로</span>
+                <input
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+                  value={form.contentRootPath}
+                  onChange={(event) => updateField("contentRootPath", event.target.value)}
+                />
+              </label>
+            </div>
+          </>
+        ) : null}
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">기본 URL</span>
+            <input
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+              value={form.baseUrl}
+              onChange={(event) => updateField("baseUrl", event.target.value)}
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">커스텀 도메인</span>
+            <input
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+              value={form.customDomain}
+              onChange={(event) => updateField("customDomain", event.target.value)}
+            />
+          </label>
+        </div>
+
+        <div className="flex flex-col justify-between gap-3 border-t border-gray-100 pt-4 dark:border-zinc-800 sm:flex-row sm:items-center">
+          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400">
+            <input checked={form.active} type="checkbox" onChange={(event) => updateField("active", event.target.checked)} />
+            활성화
+          </label>
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!form.name.trim() || createMutation.isPending}
+            title="발행 대상 추가"
+            type="submit"
+          >
+            {createMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <PlusCircle size={16} />}
+            {createMutation.isPending ? "추가 중" : "추가"}
+          </button>
+        </div>
+      </form>
+      {createMutation.isError ? (
+        <p className="mt-4 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-500 dark:bg-zinc-950 dark:text-zinc-400">
+          발행 대상을 추가하지 못했습니다. 설정값과 서버 상태를 확인해 주세요.
+        </p>
+      ) : null}
+    </section>
   );
 }
 
