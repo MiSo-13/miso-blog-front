@@ -1,7 +1,14 @@
 node_modules
 dist
 .env
-.env.local
+.env.*
+!.env.example
 .env.deploy
 .DS_Store
 *.log
+*.pem
+*.key
+*.p12
+*.jks
+id_rsa
+id_ed25519
