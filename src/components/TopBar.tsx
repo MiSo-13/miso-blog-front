@@ -53,7 +53,7 @@ export default function TopBar() {
           <nav className="ml-2 hidden items-center gap-6 md:flex lg:ml-8">
             {[
               { label: "Dashboard", href: "/" },
-              { label: "Projects", href: "/new" },
+              { label: "Projects", href: "/projects" },
               { label: "Drafts", href: "/drafts" },
             ].map((item) => {
               const isActive = item.href === "/new";

@@ -160,6 +160,16 @@ export type LocalRepository = {
   defaultBranch: string;
   description?: string;
   active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type CreateLocalRepositoryPayload = {
+  name: string;
+  localPath: string;
+  defaultBranch?: string | null;
+  description?: string | null;
+  active?: boolean | null;
 };
 
 export type AnalysisReport = {

@@ -9,6 +9,7 @@ import type {
   BlogPostRevisionPayload,
   BlogPostSummary,
   CreateBlogPostPayload,
+  CreateLocalRepositoryPayload,
   ExportVelogPayload,
   ExportVelogResult,
   HealthResponse,
@@ -70,6 +71,8 @@ export const api = {
   jobs: () => unwrap<AiJob[]>(http.get("/api/ai-jobs")),
   job: (jobId: number) => unwrap<AiJob>(http.get(`/api/ai-jobs/${jobId}`)),
   localRepositories: () => unwrap<LocalRepository[]>(http.get("/api/local-repositories")),
+  createLocalRepository: (payload: CreateLocalRepositoryPayload) =>
+    unwrap<LocalRepository>(http.post("/api/local-repositories", payload)),
   publishTargets: () => unwrap<PublishTarget[]>(http.get("/api/publish-targets")),
   publishStrategy: () => unwrap<PublishStrategy>(http.get("/api/publish-targets/strategy")),
   createDefaultPublishTargets: () =>
