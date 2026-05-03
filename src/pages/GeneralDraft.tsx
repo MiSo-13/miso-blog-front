@@ -28,11 +28,32 @@ const lengthOptions: Array<{ value: GeneralBlogLength; label: string }> = [
   { value: "LONG", label: "길게" },
 ];
 
+type GeneralBlogFormat = "STANDARD" | "NAVER";
+
+const formatOptions: Array<{ value: GeneralBlogFormat; label: string; description: string }> = [
+  {
+    value: "STANDARD",
+    label: "기본 블로그",
+    description: "주제와 메모에 맞춰 자연스러운 일반 후기형 글로 작성합니다.",
+  },
+  {
+    value: "NAVER",
+    label: "네이버 블로그",
+    description: "짧은 문단, 사진 중심 흐름, 친근한 후기체로 작성합니다.",
+  },
+];
+
 const emptyPhoto: GeneralBlogPhotoPayload = {
   url: "",
   description: "",
   placementNote: "",
 };
+
+const naverMemoInstruction =
+  "작성 양식: 네이버 블로그형. 첫 문단은 검색 독자가 공감할 짧은 도입으로 시작하고, 방문/사용 계기, 핵심 정보, 사진 설명, 실제 후기, 팁, 마무리 순서로 구성해 주세요. 문단은 짧게 나누고 광고처럼 과장하지 말고 실제 경험을 말하듯 작성해 주세요.";
+const naverToneInstruction = "네이버 블로그에 어울리는 친근한 후기체. 짧은 문단, 자연스러운 구어체, 과장 없는 경험 중심.";
+const naverImageInstruction =
+  "네이버 블로그처럼 사진 사이에 짧은 설명 문단을 배치하고 [사진: 설명] 자리표시자를 자연스럽게 넣기.";
 
 function parseList(value: string) {
   return value
@@ -49,6 +70,12 @@ function resolveAssetUrl(publicUrl: string) {
   return `${apiBaseUrl.replace(/\/$/, "")}/${publicUrl.replace(/^\//, "")}`;
 }
 
+function appendInstruction(value: string, instruction: string, maxLength: number) {
+  const trimmedValue = value.trim();
+  const combinedValue = trimmedValue ? `${trimmedValue}\n\n${instruction}` : instruction;
+  return combinedValue.length > maxLength ? combinedValue.slice(0, maxLength) : combinedValue;
+}
+
 export default function GeneralDraft() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -59,6 +86,7 @@ export default function GeneralDraft() {
   const [requiredPhrasesText, setRequiredPhrasesText] = useState("");
   const [memo, setMemo] = useState("");
   const [keywordsText, setKeywordsText] = useState("");
+  const [writingFormat, setWritingFormat] = useState<GeneralBlogFormat>("STANDARD");
   const [photos, setPhotos] = useState<GeneralBlogPhotoPayload[]>([{ ...emptyPhoto }]);
   const [photoFiles, setPhotoFiles] = useState<Record<number, File | null>>({});
   const [batchFiles, setBatchFiles] = useState<File[]>([]);
@@ -188,12 +216,21 @@ export default function GeneralDraft() {
       placeName: placeName.trim() || null,
       addressHint: addressHint.trim() || null,
       requiredPhrases: parseList(requiredPhrasesText),
-      memo: memo.trim() || null,
+      memo:
+        writingFormat === "NAVER"
+          ? appendInstruction(memo, naverMemoInstruction, 6000)
+          : memo.trim() || null,
       keywords: parseList(keywordsText),
       photos: filteredPhotos,
       photoGroupId: photoGroupId || null,
-      imagePlacementNotes: imagePlacementNotes.trim() || null,
-      tone: tone.trim() || null,
+      imagePlacementNotes:
+        writingFormat === "NAVER"
+          ? appendInstruction(imagePlacementNotes, naverImageInstruction, 300)
+          : imagePlacementNotes.trim() || null,
+      tone:
+        writingFormat === "NAVER"
+          ? appendInstruction(tone, naverToneInstruction, 200)
+          : tone.trim() || null,
       audience: audience.trim() || null,
       targetLength,
       markReviewReady,
@@ -257,6 +294,41 @@ export default function GeneralDraft() {
               생성 후 검토 대기로 전환
             </label>
           </div>
+
+          <section className="rounded-lg border border-gray-100 bg-gray-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+            <div className="mb-3">
+              <h3 className="text-sm font-bold text-gray-950 dark:text-white">작성 양식</h3>
+              <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-zinc-400">
+                같은 API 요청 안에서 선택한 양식의 작성 지시를 함께 전달합니다.
+              </p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {formatOptions.map((option) => {
+                const selected = writingFormat === option.value;
+
+                return (
+                  <button
+                    className={`rounded-lg border p-4 text-left transition active:scale-[0.99] ${
+                      selected
+                        ? "border-blue-500 bg-white shadow-sm shadow-blue-900/5 dark:border-blue-400 dark:bg-zinc-900"
+                        : "border-gray-200 bg-white hover:border-blue-200 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-500/40"
+                    }`}
+                    key={option.value}
+                    title={`${option.label} 선택`}
+                    type="button"
+                    onClick={() => setWritingFormat(option.value)}
+                  >
+                    <span className={selected ? "text-sm font-bold text-blue-600 dark:text-blue-300" : "text-sm font-bold text-gray-950 dark:text-white"}>
+                      {option.label}
+                    </span>
+                    <span className="mt-1 block text-xs leading-5 text-gray-500 dark:text-zinc-400">
+                      {option.description}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-1">
