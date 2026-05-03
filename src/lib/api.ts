@@ -12,6 +12,7 @@ import type {
   BlogPostSummary,
   CreateBlogPostPayload,
   CreateBlogPostFromAnalysisPayload,
+  CreateGeneralBlogPostPayload,
   CreateLocalRepositoryPayload,
   ExportVelogPayload,
   ExportVelogResult,
@@ -62,6 +63,8 @@ export const api = {
     unwrap<AiJob>(http.post(`/api/ai-jobs/blog-posts/${blogPostId}/revise/ai`, payload)),
   createQualityImproveJob: (blogPostId: number, payload: BlogPostQualityImprovePayload) =>
     unwrap<AiJob>(http.post(`/api/ai-jobs/blog-posts/${blogPostId}/quality-improve/ai`, payload)),
+  createGeneralDraftJob: (payload: CreateGeneralBlogPostPayload) =>
+    unwrap<AiJob>(http.post("/api/ai-jobs/blog-posts/draft/ai-general", payload)),
   markReviewReady: (blogPostId: number) =>
     unwrap<BlogPost>(http.post(`/api/blog-posts/${blogPostId}/review-ready`)),
   approveBlogPost: (blogPostId: number) =>

@@ -27,6 +27,7 @@ const paths = [
 export default function ContentPath() {
   const [selected, setSelected] = useState<PathType>("development");
   const navigate = useNavigate();
+  const nextPath = selected === "general" ? "/general/new" : "/projects";
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col bg-[#faf8ff] text-[#131b2e] dark:bg-zinc-950 dark:text-zinc-50">
@@ -99,11 +100,11 @@ export default function ContentPath() {
         <section className="mt-16 flex w-full flex-col items-center gap-4">
           <button
             className="inline-flex items-center gap-3 rounded-full bg-blue-700 px-12 py-4 font-semibold text-white shadow-lg transition duration-300 hover:scale-[1.03] hover:bg-blue-800 active:scale-[0.98]"
-            title="에디터로 이동"
+            title={selected === "general" ? "AI 초안 생성으로 이동" : "프로젝트로 이동"}
             type="button"
-            onClick={() => navigate("/editor", { state: { contentPath: selected } })}
+            onClick={() => navigate(nextPath, { state: { contentPath: selected } })}
           >
-            에디터로 이동
+            계속
             <Sparkles size={20} fill="currentColor" />
           </button>
           <p className="text-xs font-bold uppercase tracking-widest text-[#737686] dark:text-zinc-500">

@@ -49,6 +49,32 @@ export type UpdateBlogPostPayload = {
 
 export type CreateBlogPostPayload = UpdateBlogPostPayload;
 
+export type GeneralBlogCategory = "RESTAURANT" | "CAFE" | "TRAVEL" | "PRODUCT_REVIEW" | "DAILY" | "ETC";
+
+export type GeneralBlogLength = "SHORT" | "MEDIUM" | "LONG";
+
+export type GeneralBlogPhotoPayload = {
+  url?: string | null;
+  description?: string | null;
+  placementNote?: string | null;
+};
+
+export type CreateGeneralBlogPostPayload = {
+  category: GeneralBlogCategory;
+  titleHint?: string | null;
+  placeName?: string | null;
+  addressHint?: string | null;
+  requiredPhrases?: string[] | null;
+  memo?: string | null;
+  keywords?: string[] | null;
+  photos?: GeneralBlogPhotoPayload[] | null;
+  imagePlacementNotes?: string | null;
+  tone?: string | null;
+  audience?: string | null;
+  targetLength?: GeneralBlogLength | null;
+  markReviewReady?: boolean | null;
+};
+
 export type BlogPostQualityReviewPayload = {
   originalInputMemo?: string | null;
   targetReader?: string | null;

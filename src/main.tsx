@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import ContentPath from "./pages/ContentPath";
 import Editor from "./pages/Editor";
 import Drafts from "./pages/Drafts";
+import GeneralDraft from "./pages/GeneralDraft";
 import Projects from "./pages/Projects";
 import Settings from "./pages/Settings";
 import "./index.css";
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: "new", element: <ContentPath /> },
+      { path: "general/new", element: <GeneralDraft /> },
       { path: "projects", element: <Projects /> },
       { path: "editor", element: <Editor /> },
       { path: "drafts", element: <Drafts /> },
