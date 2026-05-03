@@ -314,6 +314,14 @@ export default function Editor() {
       queryClient.invalidateQueries({ queryKey: ["blog-post-version-diff", blogPostId] });
     },
   });
+  const revertPublishedMutation = useMutation({
+    mutationFn: () => api.updateBlogPostStatus(blogPostId!, { status: "DRAFT" }),
+    onSuccess: (updated) => {
+      refreshBlogPostCache(queryClient, blogPostId, updated);
+      queryClient.invalidateQueries({ queryKey: ["blog-post-versions", blogPostId] });
+      queryClient.invalidateQueries({ queryKey: ["blog-post-version-diff", blogPostId] });
+    },
+  });
   const githubPublishMutation = useMutation({
     mutationFn: () =>
       api.publishGithubPages(blogPostId!, {
@@ -422,6 +430,19 @@ export default function Editor() {
     }
 
     statusMutation.mutate(nextStatusAction.next);
+  };
+
+  const handleRevertPublished = () => {
+    if (blogPostId === null || currentStatus !== "PUBLISHED" || revertPublishedMutation.isPending) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "발행된 글을 초안 상태로 되돌린 뒤 수정합니다. 이미 GitHub Pages에 올라간 파일은 수정 후 다시 발행해야 반영됩니다.",
+    );
+    if (confirmed) {
+      revertPublishedMutation.mutate();
+    }
   };
 
   const handleRevisionJob = () => {
@@ -559,6 +580,16 @@ export default function Editor() {
             >
               {statusMutation.isPending ? "처리 중" : nextStatusAction.label}
             </button>
+          ) : currentStatus === "PUBLISHED" ? (
+            <button
+              className="hidden items-center rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/15 lg:inline-flex"
+              disabled={revertPublishedMutation.isPending}
+              title="초안으로 되돌리기"
+              type="button"
+              onClick={handleRevertPublished}
+            >
+              {revertPublishedMutation.isPending ? "되돌리는 중" : "초안으로 되돌리기"}
+            </button>
           ) : null}
           {blogPostId ? (
             <button
@@ -666,11 +697,26 @@ export default function Editor() {
                   >
                     {statusMutation.isPending ? "처리 중" : nextStatusAction.label}
                   </button>
+                ) : currentStatus === "PUBLISHED" ? (
+                  <button
+                    className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={revertPublishedMutation.isPending}
+                    title="초안으로 되돌리기"
+                    type="button"
+                    onClick={handleRevertPublished}
+                  >
+                    {revertPublishedMutation.isPending ? "되돌리는 중" : "초안으로 되돌리기"}
+                  </button>
                 ) : (
                   <span className="rounded bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-600 dark:bg-zinc-800 dark:text-zinc-300">
                     다음 작업 없음
                   </span>
                 )}
+                {currentStatus === "PUBLISHED" ? (
+                  <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+                    발행된 글은 먼저 초안으로 되돌린 뒤 수정할 수 있습니다. 되돌려도 공개 파일은 자동 삭제되지 않습니다.
+                  </p>
+                ) : null}
               </section>
             ) : null}
 

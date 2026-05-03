@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, BookOpen, CheckCircle2, Edit3, FileText, FolderOpen, ListChecks, PlusCircle, Save, Sparkles, Wand2, X } from "lucide-react";
+import { BarChart3, BookOpen, CheckCircle2, Edit3, FileText, FolderOpen, ListChecks, PlusCircle, Save, Sparkles, Trash2, Wand2, X } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -29,6 +29,7 @@ const emptyForm = {
 const defaultAnalysisForm = {
   commitLimit: 20,
   includeUncommittedChanges: true,
+  deepAnalysis: true,
   analysisMode: "LOCAL_ONLY" as LocalRepositoryAnalysisMode,
   focus: "",
   createBlogPost: false,
@@ -323,6 +324,31 @@ function RepositoryCard({ repository }: { repository: LocalRepository }) {
       queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
     },
   });
+  const deleteReportMutation = useMutation({
+    mutationFn: (reportId: number) => api.deleteLocalRepositoryReport(reportId),
+    onSuccess: () => {
+      setSelectedReportId(null);
+      queryClient.invalidateQueries({ queryKey: ["local-repository-reports", repository.id] });
+    },
+  });
+  const deleteReportsMutation = useMutation({
+    mutationFn: api.deleteLocalRepositoryReports,
+    onSuccess: () => {
+      setSelectedReportId(null);
+      queryClient.invalidateQueries({ queryKey: ["local-repository-reports", repository.id] });
+    },
+  });
+  const rerunAnalysisMutation = useMutation({
+    mutationFn: async (payload: AnalyzeLocalRepositoryPayload) => {
+      await api.deleteLocalRepositoryReports(repository.id);
+      return api.analyzeLocalRepository(repository.id, payload);
+    },
+    onSuccess: (report) => {
+      setSelectedReportId(report.id);
+      queryClient.invalidateQueries({ queryKey: ["local-repository-reports", repository.id] });
+      queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
+    },
+  });
   const updateRepositoryMutation = useMutation({
     mutationFn: (payload: UpdateLocalRepositoryPayload) => api.updateLocalRepository(repository.id, payload),
     onSuccess: () => {
@@ -393,15 +419,18 @@ function RepositoryCard({ repository }: { repository: LocalRepository }) {
     });
   };
 
-  const handleAnalyze = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    analyzeMutation.mutate({
+  const createAnalysisPayload = (): AnalyzeLocalRepositoryPayload => ({
       commitLimit: analysisForm.commitLimit,
       includeUncommittedChanges: analysisForm.includeUncommittedChanges,
+      deepAnalysis: analysisForm.deepAnalysis,
       analysisMode: analysisForm.analysisMode,
       focus: analysisForm.focus.trim() || null,
       createBlogPost: analysisForm.createBlogPost,
-    });
+  });
+
+  const handleAnalyze = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    analyzeMutation.mutate(createAnalysisPayload());
   };
 
   return (
@@ -566,6 +595,14 @@ function RepositoryCard({ repository }: { repository: LocalRepository }) {
               </label>
               <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400">
                 <input
+                  checked={analysisForm.deepAnalysis}
+                  type="checkbox"
+                  onChange={(event) => updateAnalysisField("deepAnalysis", event.target.checked)}
+                />
+                깊게 분석
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400">
+                <input
                   checked={analysisForm.createBlogPost}
                   type="checkbox"
                   onChange={(event) => updateAnalysisField("createBlogPost", event.target.checked)}
@@ -573,16 +610,51 @@ function RepositoryCard({ repository }: { repository: LocalRepository }) {
                 분석 후 초안 생성
               </label>
             </div>
-            <button
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={analyzeMutation.isPending}
-              title="저장소 분석 실행"
-              type="submit"
-            >
-              <Sparkles size={16} />
-              {analyzeMutation.isPending ? "분석 중" : "분석"}
-            </button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-100 bg-white px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-500/20 dark:bg-zinc-900 dark:text-red-300 dark:hover:bg-red-500/10"
+                disabled={reports.length === 0 || rerunAnalysisMutation.isPending}
+                title="전체 삭제 후 다시 분석"
+                type="button"
+                onClick={() => {
+                  if (window.confirm("기존 분석 결과를 모두 삭제하고 현재 옵션으로 다시 분석할까요?")) {
+                    rerunAnalysisMutation.mutate(createAnalysisPayload());
+                  }
+                }}
+              >
+                <Sparkles size={16} />
+                재분석
+              </button>
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                disabled={reports.length === 0 || deleteReportsMutation.isPending}
+                title="전체 분석 결과 삭제"
+                type="button"
+                onClick={() => {
+                  if (window.confirm("이 저장소의 분석 결과를 모두 삭제할까요?")) {
+                    deleteReportsMutation.mutate(repository.id);
+                  }
+                }}
+              >
+                <Trash2 size={16} />
+                삭제
+              </button>
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={analyzeMutation.isPending || rerunAnalysisMutation.isPending}
+                title="저장소 분석 실행"
+                type="submit"
+              >
+                <Sparkles size={16} />
+                {analyzeMutation.isPending || rerunAnalysisMutation.isPending ? "분석 중" : "분석"}
+              </button>
+            </div>
           </div>
+          {analysisForm.deepAnalysis ? (
+            <p className="text-xs leading-5 text-gray-500 dark:text-zinc-500">
+              깊게 분석을 켜면 변경된 주요 소스 파일의 현재 코드 일부까지 분석 컨텍스트에 포함합니다.
+            </p>
+          ) : null}
         </div>
       </form>
 
@@ -594,6 +666,7 @@ function RepositoryCard({ repository }: { repository: LocalRepository }) {
         isWritingDraft={writeDraftMutation.isPending}
         onSelectReport={setSelectedReportId}
         onCreateDraft={(reportId) => createDraftMutation.mutate(reportId)}
+        onDeleteReport={(reportId) => deleteReportMutation.mutate(reportId)}
         onWriteDraft={(reportId, payload) => writeDraftMutation.mutate({ reportId, payload })}
       />
     </article>
@@ -608,6 +681,7 @@ function AnalysisReportPanel({
   isWritingDraft,
   onSelectReport,
   onCreateDraft,
+  onDeleteReport,
   onWriteDraft,
 }: {
   report?: AnalysisReport;
@@ -617,6 +691,7 @@ function AnalysisReportPanel({
   isWritingDraft: boolean;
   onSelectReport: (reportId: number | null) => void;
   onCreateDraft: (reportId: number) => void;
+  onDeleteReport: (reportId: number) => void;
   onWriteDraft: (reportId: number, payload: WriteBlogPostFromAnalysisPayload) => void;
 }) {
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
@@ -652,7 +727,7 @@ function AnalysisReportPanel({
     );
   }
 
-  const isComplete = report.status === "SUCCEEDED";
+  const isComplete = report.status === "SUCCESS" || report.status === "SUCCEEDED";
   const canWriteDraft =
     isComplete && (selectedKeywords.length > 0 || selectedTopicTitle.trim().length > 0 || writingFocus.trim().length > 0);
 
@@ -689,20 +764,34 @@ function AnalysisReportPanel({
         </div>
         <div className="grid gap-2 sm:min-w-44">
           <span className="text-xs text-gray-500 dark:text-zinc-500 sm:text-right">{formatDateTime(report.updatedAt)}</span>
-          {reports.length > 1 ? (
-            <select
-              className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
-              title="분석 리포트 선택"
-              value={selectedReportId ?? ""}
-              onChange={(event) => onSelectReport(event.target.value ? Number(event.target.value) : null)}
+          <div className="flex gap-2">
+            {reports.length > 1 ? (
+              <select
+                className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+                title="분석 리포트 선택"
+                value={selectedReportId ?? ""}
+                onChange={(event) => onSelectReport(event.target.value ? Number(event.target.value) : null)}
+              >
+                {reports.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    #{item.id} · {statusLabel(item.status)} · {formatDateTime(item.updatedAt)}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            <button
+              className="rounded-lg border border-red-100 bg-white p-1.5 text-red-600 transition hover:bg-red-50 dark:border-red-500/20 dark:bg-zinc-950 dark:text-red-300 dark:hover:bg-red-500/10"
+              title="이 분석 결과 삭제"
+              type="button"
+              onClick={() => {
+                if (window.confirm("이 분석 결과를 삭제할까요?")) {
+                  onDeleteReport(report.id);
+                }
+              }}
             >
-              {reports.map((item) => (
-                <option key={item.id} value={item.id}>
-                  #{item.id} · {statusLabel(item.status)} · {formatDateTime(item.updatedAt)}
-                </option>
-              ))}
-            </select>
-          ) : null}
+              <Trash2 size={15} />
+            </button>
+          </div>
         </div>
       </div>
       {isComplete && report.analysisSummary ? (

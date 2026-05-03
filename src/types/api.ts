@@ -314,11 +314,12 @@ export type UpdateLocalRepositoryPayload = CreateLocalRepositoryPayload;
 
 export type LocalRepositoryAnalysisMode = "LOCAL_ONLY" | "OPENAI";
 
-export type LocalRepositoryAnalysisStatus = "SUCCEEDED" | "FAILED" | "RUNNING" | "PENDING" | string;
+export type LocalRepositoryAnalysisStatus = "SUCCESS" | "SUCCEEDED" | "FAILED" | "RUNNING" | "PENDING" | string;
 
 export type AnalyzeLocalRepositoryPayload = {
   commitLimit?: number | null;
   includeUncommittedChanges?: boolean | null;
+  deepAnalysis?: boolean | null;
   analysisMode?: LocalRepositoryAnalysisMode | null;
   focus?: string | null;
   createBlogPost?: boolean | null;
@@ -370,13 +371,18 @@ export type CreateGitRepositoryPayload = {
 
 export type UpdateGitRepositoryPayload = CreateGitRepositoryPayload;
 
-export type GitAnalysisStatus = "SUCCEEDED" | "FAILED" | "RUNNING" | "PENDING" | string;
+export type GitAnalysisStatus = "SUCCESS" | "SUCCEEDED" | "FAILED" | "RUNNING" | "PENDING" | string;
 
 export type AnalyzeGitRepositoryPayload = {
   commitLimit?: number | null;
   analyzeAllCommits?: boolean | null;
+  deepAnalysis?: boolean | null;
   focus?: string | null;
   createBlogPost?: boolean | null;
+};
+
+export type UpdateBlogPostStatusPayload = {
+  status: BlogPostStatus;
 };
 
 export type GitAnalysisReport = {

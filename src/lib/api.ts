@@ -49,6 +49,7 @@ import type {
   PublishTarget,
   UpdateBlogReferenceUrlPayload,
   UpdateBlogPostPayload,
+  UpdateBlogPostStatusPayload,
   UpdateGitRepositoryPayload,
   UpdateLocalRepositoryPayload,
   UpdatePublishTargetPayload,
@@ -199,6 +200,9 @@ function successTitle(method: string, url: string) {
   if (method === "PATCH" && /\/api\/blog-posts\/\d+$/.test(url)) {
     return "글이 저장되었습니다.";
   }
+  if (method === "PATCH" && /\/api\/blog-posts\/\d+\/status$/.test(url)) {
+    return "글 상태를 변경했습니다.";
+  }
   if (method === "POST" && /\/api\/blog-posts\/draft\/manual$/.test(url)) {
     return "초안이 생성되었습니다.";
   }
@@ -262,6 +266,12 @@ function successTitle(method: string, url: string) {
   if (method === "POST" && /\/api\/local-repositories\/analysis-reports\/\d+\/write-blog-post$/.test(url)) {
     return "분석 기반 글 작성을 완료했습니다.";
   }
+  if (method === "DELETE" && /\/api\/local-repositories\/analysis-reports\/\d+$/.test(url)) {
+    return "로컬 분석 결과를 삭제했습니다.";
+  }
+  if (method === "DELETE" && /\/api\/local-repositories\/\d+\/analysis-reports$/.test(url)) {
+    return "로컬 분석 결과를 모두 삭제했습니다.";
+  }
   if (method === "POST" && /\/api\/git-repositories$/.test(url)) {
     return "GitHub 저장소를 등록했습니다.";
   }
@@ -279,6 +289,12 @@ function successTitle(method: string, url: string) {
   }
   if (method === "POST" && /\/api\/git-repositories\/analysis-reports\/\d+\/write-blog-post$/.test(url)) {
     return "GitHub 분석 기반 글 작성을 완료했습니다.";
+  }
+  if (method === "DELETE" && /\/api\/git-repositories\/analysis-reports\/\d+$/.test(url)) {
+    return "GitHub 분석 결과를 삭제했습니다.";
+  }
+  if (method === "DELETE" && /\/api\/git-repositories\/\d+\/analysis-reports$/.test(url)) {
+    return "GitHub 분석 결과를 모두 삭제했습니다.";
   }
   if (method === "POST" && /\/api\/publish-targets\/defaults$/.test(url)) {
     return "기본 발행 대상을 생성했습니다.";
@@ -370,6 +386,8 @@ export const api = {
     unwrap<BlogPost>(http.post("/api/blog-posts/draft/manual", payload)),
   updateBlogPost: (blogPostId: number, payload: UpdateBlogPostPayload) =>
     unwrap<BlogPost>(http.patch(`/api/blog-posts/${blogPostId}`, payload)),
+  updateBlogPostStatus: (blogPostId: number, payload: UpdateBlogPostStatusPayload) =>
+    unwrap<BlogPost>(http.patch(`/api/blog-posts/${blogPostId}/status`, payload)),
   reviewBlogPostQuality: (blogPostId: number, payload: BlogPostQualityReviewPayload) =>
     unwrap<BlogPostQualityReview>(http.post(`/api/blog-posts/${blogPostId}/quality-review/ai`, payload)),
   createRevisionJob: (blogPostId: number, payload: BlogPostRevisionPayload) =>
@@ -446,6 +464,10 @@ export const api = {
     unwrap<AnalysisReport[]>(http.get(`/api/local-repositories/${repositoryId}/analysis-reports`)),
   localRepositoryReport: (reportId: number) =>
     unwrap<AnalysisReport>(http.get(`/api/local-repositories/analysis-reports/${reportId}`)),
+  deleteLocalRepositoryReport: (reportId: number) =>
+    unwrap<void>(http.delete(`/api/local-repositories/analysis-reports/${reportId}`)),
+  deleteLocalRepositoryReports: (repositoryId: number) =>
+    unwrap<void>(http.delete(`/api/local-repositories/${repositoryId}/analysis-reports`)),
   createBlogPostFromAnalysis: (reportId: number, payload: CreateBlogPostFromAnalysisPayload) =>
     unwrap<BlogPost>(http.post(`/api/local-repositories/analysis-reports/${reportId}/blog-post`, payload)),
   writeBlogPostFromAnalysis: (reportId: number, payload: WriteBlogPostFromAnalysisPayload) =>
@@ -463,6 +485,10 @@ export const api = {
     unwrap<GitAnalysisReport[]>(http.get(`/api/git-repositories/${repositoryId}/analysis-reports`)),
   gitRepositoryReport: (reportId: number) =>
     unwrap<GitAnalysisReport>(http.get(`/api/git-repositories/analysis-reports/${reportId}`)),
+  deleteGitRepositoryReport: (reportId: number) =>
+    unwrap<void>(http.delete(`/api/git-repositories/analysis-reports/${reportId}`)),
+  deleteGitRepositoryReports: (repositoryId: number) =>
+    unwrap<void>(http.delete(`/api/git-repositories/${repositoryId}/analysis-reports`)),
   createBlogPostFromGitAnalysis: (reportId: number, payload: CreateBlogPostFromAnalysisPayload) =>
     unwrap<BlogPost>(http.post(`/api/git-repositories/analysis-reports/${reportId}/blog-post`, payload)),
   writeBlogPostFromGitAnalysis: (reportId: number, payload: WriteBlogPostFromAnalysisPayload) =>
