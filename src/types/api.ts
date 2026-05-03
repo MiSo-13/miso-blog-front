@@ -47,6 +47,8 @@ export type UpdateBlogPostPayload = {
   sourceNote?: string | null;
 };
 
+export type CreateBlogPostPayload = UpdateBlogPostPayload;
+
 export type AiJobStatus = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
 
 export type AiJob = {

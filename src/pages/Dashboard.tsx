@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpRight,
   CalendarDays,
@@ -10,8 +9,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import MetricCard from "../components/MetricCard";
-import { api } from "../lib/api";
-import { statusLabel } from "../lib/format";
 
 const recentDrafts = [
   {
@@ -22,7 +19,7 @@ const recentDrafts = [
     summary: "Admin API integration, usage estimation, and operational guardrails for monthly AI budgets.",
   },
   {
-    title: "성수동 파스타 맛집 방문 후기",
+    title: "Seongsu Pasta Restaurant Review",
     tag: "GENERAL",
     time: "Yesterday",
     words: "840 words",
@@ -38,18 +35,11 @@ const recentDrafts = [
 ];
 
 export default function Dashboard() {
-  const healthQuery = useQuery({
-    queryKey: ["health"],
-    queryFn: api.health,
-  });
-
-  const serverStatus = healthQuery.isSuccess ? statusLabel(healthQuery.data.status ?? "ONLINE") : "Offline";
-
   return (
     <div className="pt-8">
       <section className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
         <div>
-          <p className="mb-2 text-sm font-semibold text-blue-600 dark:text-blue-400">Server status: {serverStatus}</p>
+          <p className="mb-2 text-sm font-semibold text-blue-600 dark:text-blue-400">MiSo Blog workspace</p>
           <h1 className="mb-2 text-3xl font-bold leading-tight text-gray-950 dark:text-white">Welcome back, Writer</h1>
           <p className="max-w-2xl text-base leading-relaxed text-gray-600 dark:text-zinc-400">
             Your drafting desk is ready for repository analysis, AI-assisted writing, review, and publishing.

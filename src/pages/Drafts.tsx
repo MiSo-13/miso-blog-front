@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, FileText, Loader2, Plus } from "lucide-react";
+import { FileText, Loader2, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { cn } from "../lib/cn";
@@ -17,7 +17,9 @@ export default function Drafts() {
   const blogPostsQuery = useQuery({
     queryKey: ["blog-posts"],
     queryFn: api.blogPosts,
+    retry: false,
   });
+  const posts = blogPostsQuery.isSuccess ? blogPostsQuery.data : [];
 
   return (
     <div className="pt-8">
@@ -36,24 +38,12 @@ export default function Drafts() {
         <div className="flex min-h-72 items-center justify-center rounded-lg border border-gray-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center gap-3 text-sm font-semibold text-gray-600 dark:text-zinc-300">
             <Loader2 className="animate-spin text-blue-600" size={20} />
-            Loading drafts from MiSo Blog Server
+            Loading drafts
           </div>
         </div>
       ) : null}
 
-      {blogPostsQuery.isError ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-8 dark:border-red-500/20 dark:bg-red-500/10">
-          <div className="mb-3 flex items-center gap-2 text-red-700 dark:text-red-300">
-            <AlertCircle size={20} />
-            <h2 className="font-bold">Unable to load drafts</h2>
-          </div>
-          <p className="text-sm leading-relaxed text-red-700/80 dark:text-red-200">
-            서버가 실행 중인지 확인해 주세요. 기본 API 주소는 <code>http://localhost:8010</code> 입니다.
-          </p>
-        </div>
-      ) : null}
-
-      {blogPostsQuery.isSuccess && blogPostsQuery.data.length === 0 ? (
+      {!blogPostsQuery.isLoading && posts.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
           <FileText className="mx-auto mb-4 text-blue-600" size={34} />
           <h2 className="mb-2 text-xl font-bold text-gray-950 dark:text-white">No drafts yet</h2>
@@ -63,9 +53,9 @@ export default function Drafts() {
         </div>
       ) : null}
 
-      {blogPostsQuery.isSuccess && blogPostsQuery.data.length > 0 ? (
+      {posts.length > 0 ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          {blogPostsQuery.data.map((post) => (
+          {posts.map((post) => (
             <article
               className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:border-blue-200 hover:shadow-soft dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-500/40"
               key={post.id}

@@ -3,10 +3,10 @@ import { Bold, Code2, Image, Italic, Link as LinkIcon, Send } from "lucide-react
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { countWords } from "../lib/format";
-import type { UpdateBlogPostPayload } from "../types/api";
+import type { CreateBlogPostPayload, UpdateBlogPostPayload } from "../types/api";
 
 const initialMarkdown = `# Introduction
 
@@ -33,6 +33,7 @@ const toolbar = [
 
 export default function Editor() {
   const params = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const blogPostId = params.blogPostId ? Number(params.blogPostId) : null;
   const [title, setTitle] = useState("The Impact of React Hooks on Frontend Architecture");
@@ -55,6 +56,7 @@ export default function Editor() {
     queryKey: ["blog-post", blogPostId],
     queryFn: () => api.blogPost(blogPostId!),
     enabled: blogPostId !== null && Number.isFinite(blogPostId),
+    retry: false,
   });
 
   useEffect(() => {
@@ -77,22 +79,40 @@ export default function Editor() {
       queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
     },
   });
+  const createMutation = useMutation({
+    mutationFn: (payload: CreateBlogPostPayload) => api.createManualDraft(payload),
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["blog-posts"] });
+      navigate(`/drafts/${created.id}`, { replace: true });
+    },
+  });
 
-  const canSave = blogPostId !== null && blogPostQuery.data?.status !== "PUBLISHED";
+  const canSave =
+    title.trim().length > 0 &&
+    markdown.trim().length > 0 &&
+    (blogPostId === null || blogPostQuery.data?.status !== "PUBLISHED");
+  const isSaving = updateMutation.isPending || createMutation.isPending;
 
   const handleSave = () => {
     if (!canSave) {
       return;
     }
 
-    updateMutation.mutate({
+    const payload = {
       title,
       slug: slug || null,
       summary: summary || null,
       contentMarkdown: markdown,
       tags,
       sourceNote: sourceNote || null,
-    });
+    };
+
+    if (blogPostId === null) {
+      createMutation.mutate(payload);
+      return;
+    }
+
+    updateMutation.mutate(payload);
   };
 
   return (
@@ -126,29 +146,20 @@ export default function Editor() {
           <span className="hidden text-xs font-semibold uppercase text-gray-500 dark:text-zinc-400 sm:inline">
             {blogPostQuery.isFetching ? "Loading..." : `${words} Words`}
           </span>
-          {updateMutation.isSuccess ? (
+          {updateMutation.isSuccess || createMutation.isSuccess ? (
             <span className="hidden text-xs font-bold uppercase text-green-600 dark:text-green-400 md:inline">Saved</span>
-          ) : null}
-          {updateMutation.isError ? (
-            <span className="hidden text-xs font-bold uppercase text-red-600 dark:text-red-400 md:inline">Save failed</span>
           ) : null}
           <button
             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-            disabled={!canSave || updateMutation.isPending}
+            disabled={!canSave || isSaving}
             type="button"
             onClick={handleSave}
           >
             <Send size={16} />
-            {blogPostId ? "Save" : "Draft"}
+            {blogPostId ? "Save" : "Create Draft"}
           </button>
         </div>
       </section>
-
-      {blogPostQuery.isError ? (
-        <div className="border-b border-red-200 bg-red-50 px-8 py-3 text-sm font-semibold text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
-          글을 불러오지 못했습니다. 서버 실행 상태와 글 ID를 확인해 주세요.
-        </div>
-      ) : null}
 
       <section className="flex min-h-0 flex-1 overflow-hidden">
         <div className="flex h-full w-full flex-col overflow-y-auto border-r border-gray-100 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950 lg:w-1/2 lg:p-8">

@@ -4,6 +4,7 @@ import type {
   ApiResponse,
   BlogPost,
   BlogPostSummary,
+  CreateBlogPostPayload,
   HealthResponse,
   LocalRepository,
   PublishTarget,
@@ -37,6 +38,8 @@ export const api = {
   health: () => unwrap<HealthResponse>(http.get("/api/system/health")),
   blogPosts: () => unwrap<BlogPostSummary[]>(http.get("/api/blog-posts")),
   blogPost: (blogPostId: number) => unwrap<BlogPost>(http.get(`/api/blog-posts/${blogPostId}`)),
+  createManualDraft: (payload: CreateBlogPostPayload) =>
+    unwrap<BlogPost>(http.post("/api/blog-posts/draft/manual", payload)),
   updateBlogPost: (blogPostId: number, payload: UpdateBlogPostPayload) =>
     unwrap<BlogPost>(http.patch(`/api/blog-posts/${blogPostId}`, payload)),
   jobs: () => unwrap<AiJob[]>(http.get("/api/ai-jobs")),
