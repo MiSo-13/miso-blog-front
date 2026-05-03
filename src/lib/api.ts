@@ -8,6 +8,7 @@ import type {
   AnalyzeLocalRepositoryPayload,
   ApiResponse,
   BlogMediaAsset,
+  BlogMediaBatchUpload,
   BlogPost,
   BlogPostQualityImprovePayload,
   BlogPostQualityReview,
@@ -227,6 +228,9 @@ function successTitle(method: string, url: string) {
   if (method === "POST" && /\/api\/media\/images$/.test(url)) {
     return "이미지를 업로드했습니다.";
   }
+  if (method === "POST" && /\/api\/media\/images\/batch$/.test(url)) {
+    return "이미지 묶음을 업로드했습니다.";
+  }
   if (method === "POST" && /\/api\/ai-jobs\/\d+\/retry$/.test(url)) {
     return "작업을 다시 시작했습니다.";
   }
@@ -369,6 +373,8 @@ export const api = {
   exportVelog: (blogPostId: number, payload: ExportVelogPayload) =>
     unwrap<ExportVelogResult>(http.post(`/api/blog-posts/${blogPostId}/export/velog`, payload)),
   mediaImages: () => unwrap<BlogMediaAsset[]>(http.get("/api/media/images")),
+  mediaImagesByGroup: (uploadGroupId: string) =>
+    unwrap<BlogMediaAsset[]>(http.get("/api/media/images/groups", { params: { uploadGroupId } })),
   uploadMediaImage: (file: File, altText?: string | null, note?: string | null) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -380,6 +386,18 @@ export const api = {
     }
     return unwrap<BlogMediaAsset>(
       http.post("/api/media/images", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      }),
+    );
+  },
+  uploadMediaImages: (files: File[], altTexts?: Array<string | null>, notes?: Array<string | null>) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+    altTexts?.forEach((altText) => formData.append("altTexts", altText ?? ""));
+    notes?.forEach((note) => formData.append("notes", note ?? ""));
+
+    return unwrap<BlogMediaBatchUpload>(
+      http.post("/api/media/images/batch", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       }),
     );

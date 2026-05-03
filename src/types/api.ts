@@ -107,6 +107,8 @@ export type CreateGeneralBlogPostPayload = {
   memo?: string | null;
   keywords?: string[] | null;
   photos?: GeneralBlogPhotoPayload[] | null;
+  photoAssetIds?: number[] | null;
+  photoGroupId?: string | null;
   imagePlacementNotes?: string | null;
   tone?: string | null;
   audience?: string | null;
@@ -211,10 +213,17 @@ export type BlogMediaAsset = {
   fileSize: number;
   relativePath: string;
   publicUrl: string;
+  uploadGroupId: string | null;
   altText: string | null;
   note: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type BlogMediaBatchUpload = {
+  uploadGroupId: string;
+  uploadedCount: number;
+  assets: BlogMediaAsset[];
 };
 
 export type AiJobStatus = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";

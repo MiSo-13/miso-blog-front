@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { EmptyState, Notice } from "../components/StateBlock";
 import { api, apiBaseUrl } from "../lib/api";
 import { formatDateTime } from "../lib/format";
-import type { BlogMediaAsset } from "../types/api";
+import type { BlogMediaAsset, BlogMediaBatchUpload } from "../types/api";
 
 const acceptedImageTypes = "image/gif,image/jpeg,image/png,image/webp";
 
@@ -44,7 +44,8 @@ async function copyText(value: string) {
 
 export default function MediaLibrary() {
   const queryClient = useQueryClient();
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [fileMetas, setFileMetas] = useState<Array<{ altText: string; note: string }>>([]);
   const [altText, setAltText] = useState("");
   const [note, setNote] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -54,10 +55,21 @@ export default function MediaLibrary() {
     queryFn: api.mediaImages,
     retry: false,
   });
-  const uploadMutation = useMutation({
-    mutationFn: () => api.uploadMediaImage(file!, altText.trim() || null, note.trim() || null),
+  const uploadMutation = useMutation<BlogMediaAsset | BlogMediaBatchUpload>({
+    mutationFn: () => {
+      if (files.length === 1) {
+        return api.uploadMediaImage(files[0], altText.trim() || null, note.trim() || null);
+      }
+
+      return api.uploadMediaImages(
+        files,
+        fileMetas.map((meta) => meta.altText.trim() || null),
+        fileMetas.map((meta) => meta.note.trim() || null),
+      );
+    },
     onSuccess: () => {
-      setFile(null);
+      setFiles([]);
+      setFileMetas([]);
       setAltText("");
       setNote("");
       queryClient.invalidateQueries({ queryKey: ["media-images"] });
@@ -71,11 +83,23 @@ export default function MediaLibrary() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!file || uploadMutation.isPending) {
+    if (files.length === 0 || uploadMutation.isPending) {
       return;
     }
 
     uploadMutation.mutate();
+  };
+
+  const handleFiles = (selectedFiles: FileList | null) => {
+    const nextFiles = Array.from(selectedFiles ?? []);
+    setFiles(nextFiles);
+    setFileMetas(nextFiles.map(() => ({ altText: "", note: "" })));
+  };
+
+  const updateFileMeta = (index: number, field: "altText" | "note", value: string) => {
+    setFileMetas((current) =>
+      current.map((meta, metaIndex) => (metaIndex === index ? { ...meta, [field]: value } : meta)),
+    );
   };
 
   const handleCopy = async (key: string, value: string) => {
@@ -106,39 +130,71 @@ export default function MediaLibrary() {
               <input
                 accept={acceptedImageTypes}
                 className="w-full rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-2 file:text-xs file:font-bold file:text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 dark:file:bg-zinc-900 dark:file:text-zinc-200 dark:focus:ring-blue-500/15"
+                multiple
                 type="file"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                onChange={(event) => handleFiles(event.target.files)}
               />
             </label>
-            <label className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">
-                대체 텍스트
-              </span>
-              <input
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
-                value={altText}
-                onChange={(event) => setAltText(event.target.value)}
-              />
-            </label>
+            {files.length <= 1 ? (
+              <label className="space-y-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">
+                  대체 텍스트
+                </span>
+                <input
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+                  value={altText}
+                  onChange={(event) => setAltText(event.target.value)}
+                />
+              </label>
+            ) : null}
           </div>
-          <label className="space-y-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">사진 메모</span>
-            <textarea
-              className="min-h-20 w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-            />
-          </label>
+          {files.length <= 1 ? (
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">사진 메모</span>
+              <textarea
+                className="min-h-20 w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+              />
+            </label>
+          ) : (
+            <div className="grid gap-2">
+              {files.map((file, index) => (
+                <div
+                  className="grid gap-2 rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-zinc-800 dark:bg-zinc-950 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]"
+                  key={`${file.name}-${index}`}
+                >
+                  <p className="truncate text-xs font-semibold text-gray-700 dark:text-zinc-200" title={file.name}>
+                    {file.name}
+                  </p>
+                  <input
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                    placeholder="대체 텍스트"
+                    value={fileMetas[index]?.altText ?? ""}
+                    onChange={(event) => updateFileMeta(index, "altText", event.target.value)}
+                  />
+                  <input
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                    placeholder="사진 메모"
+                    value={fileMetas[index]?.note ?? ""}
+                    onChange={(event) => updateFileMeta(index, "note", event.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <p className="text-xs text-gray-500 dark:text-zinc-500">jpg, png, webp, gif 파일을 업로드할 수 있습니다.</p>
+            <p className="text-xs text-gray-500 dark:text-zinc-500">
+              jpg, png, webp, gif 파일을 여러 장 선택할 수 있습니다.
+            </p>
             <button
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={!file || uploadMutation.isPending}
-              title="이미지 업로드"
+              disabled={files.length === 0 || uploadMutation.isPending}
+              title={files.length > 1 ? "이미지 묶음 업로드" : "이미지 업로드"}
               type="submit"
             >
               {uploadMutation.isPending ? <Loader2 className="animate-spin" size={17} /> : <Upload size={17} />}
-              업로드
+              {files.length > 1 ? "묶음 업로드" : "업로드"}
             </button>
           </div>
         </form>
