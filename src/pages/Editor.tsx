@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bold, ClipboardCheck, Code2, Image, Italic, Link as LinkIcon, Send } from "lucide-react";
+import { Bold, ClipboardCheck, Code2, Image, Italic, Link as LinkIcon, RefreshCw, Send } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -10,6 +10,7 @@ import { countWords } from "../lib/format";
 import type {
   BlogPost,
   BlogPostQualityReviewPayload,
+  BlogPostRevisionPayload,
   BlogPostStatus,
   CreateBlogPostPayload,
   UpdateBlogPostPayload,
@@ -70,6 +71,14 @@ export default function Editor() {
   const [reviewMemo, setReviewMemo] = useState("");
   const [targetReader, setTargetReader] = useState("");
   const [monetizationGoal, setMonetizationGoal] = useState("");
+  const [revisionInstruction, setRevisionInstruction] = useState("");
+  const [additionalMemo, setAdditionalMemo] = useState("");
+  const [revisionTone, setRevisionTone] = useState("");
+  const [targetLength, setTargetLength] = useState<"SHORT" | "MEDIUM" | "LONG">("LONG");
+  const [preserveTitle, setPreserveTitle] = useState(false);
+  const [preserveTags, setPreserveTags] = useState(true);
+  const [markReviewReadyAfterRevision, setMarkReviewReadyAfterRevision] = useState(true);
+  const [revisionJobId, setRevisionJobId] = useState<number | null>(null);
   const [markdown, setMarkdown] = useState(initialMarkdown);
   const words = useMemo(() => countWords(`${title} ${markdown}`), [markdown, title]);
   const tags = useMemo(
@@ -116,7 +125,38 @@ export default function Editor() {
   });
   const qualityReviewMutation = useMutation({
     mutationFn: (payload: BlogPostQualityReviewPayload) => api.reviewBlogPostQuality(blogPostId!, payload),
+    onSuccess: (review) => {
+      if (review.revisionInstruction) {
+        setRevisionInstruction(review.revisionInstruction);
+      }
+    },
   });
+  const revisionJobQuery = useQuery({
+    queryKey: ["ai-job", revisionJobId],
+    queryFn: () => api.job(revisionJobId!),
+    enabled: revisionJobId !== null,
+    retry: false,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === "PENDING" || status === "RUNNING" ? 2000 : false;
+    },
+  });
+  useEffect(() => {
+    const job = revisionJobQuery.data;
+    if (!job || job.status !== "SUCCEEDED" || !job.resultBlogPostId) {
+      return;
+    }
+
+    void queryClient
+      .fetchQuery({
+        queryKey: ["blog-post", job.resultBlogPostId],
+        queryFn: () => api.blogPost(job.resultBlogPostId!),
+      })
+      .then((updated) => {
+        refreshBlogPostCache(queryClient, job.resultBlogPostId, updated);
+        setRevisionJobId(null);
+      });
+  }, [queryClient, revisionJobQuery.data]);
   const statusMutation = useMutation({
     mutationFn: async (next: "review-ready" | "approve" | "publish") => {
       if (next === "review-ready") {
@@ -140,6 +180,9 @@ export default function Editor() {
     (blogPostId === null || blogPostQuery.data?.status !== "PUBLISHED");
   const isSaving = updateMutation.isPending || createMutation.isPending;
   const canReview = blogPostId !== null && blogPostQuery.data !== undefined;
+  const isRevisionRunning =
+    revisionJobQuery.data?.status === "PENDING" ||
+    revisionJobQuery.data?.status === "RUNNING";
 
   const handleSave = () => {
     if (!canSave) {
@@ -181,6 +224,31 @@ export default function Editor() {
     }
 
     statusMutation.mutate(nextStatusAction.next);
+  };
+
+  const handleRevisionJob = () => {
+    if (blogPostId === null || revisionInstruction.trim().length === 0 || isRevisionRunning) {
+      return;
+    }
+
+    const payload: BlogPostRevisionPayload = {
+      revisionInstruction,
+      additionalMemo: additionalMemo || null,
+      tone: revisionTone || null,
+      targetLength,
+      preserveTitle,
+      preserveTags,
+      markReviewReady: markReviewReadyAfterRevision,
+    };
+
+    api
+      .createRevisionJob(blogPostId, payload)
+      .then((job) => {
+        setRevisionJobId(job.id);
+      })
+      .catch(() => {
+        setRevisionJobId(null);
+      });
   };
 
   return (
@@ -415,12 +483,98 @@ export default function Editor() {
                     ) : null}
                     {qualityReviewMutation.data.revisionInstruction ? (
                       <div>
-                        <h3 className="mb-2 text-sm font-bold text-gray-950 dark:text-white">Revision Instruction</h3>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <h3 className="text-sm font-bold text-gray-950 dark:text-white">Revision Instruction</h3>
+                          <button
+                            className="rounded bg-white px-2 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100 transition hover:bg-blue-50 dark:bg-zinc-950 dark:text-blue-300 dark:ring-blue-500/20"
+                            type="button"
+                            onClick={() => setRevisionInstruction(qualityReviewMutation.data.revisionInstruction)}
+                          >
+                            Use
+                          </button>
+                        </div>
                         <p className="text-sm leading-6 text-gray-600 dark:text-zinc-400">{qualityReviewMutation.data.revisionInstruction}</p>
                       </div>
                     ) : null}
                   </div>
                 ) : null}
+              </section>
+            ) : null}
+
+            {blogPostId ? (
+              <section className="mb-8 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-base font-bold text-gray-950 dark:text-white">AI Revision</h2>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+                      Send the quality review instruction through the async revision job flow.
+                    </p>
+                  </div>
+                  <button
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={revisionInstruction.trim().length === 0 || isRevisionRunning}
+                    type="button"
+                    onClick={handleRevisionJob}
+                  >
+                    <RefreshCw className={cn(isRevisionRunning && "animate-spin")} size={16} />
+                    {isRevisionRunning ? "Revising" : "Revise"}
+                  </button>
+                </div>
+
+                <div className="grid gap-3">
+                  <textarea
+                    className="min-h-24 resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                    placeholder="Revision instruction"
+                    value={revisionInstruction}
+                    onChange={(event) => setRevisionInstruction(event.target.value)}
+                  />
+                  <textarea
+                    className="min-h-16 resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-6 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                    placeholder="Additional memo"
+                    value={additionalMemo}
+                    onChange={(event) => setAdditionalMemo(event.target.value)}
+                  />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <input
+                      className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                      placeholder="Tone"
+                      value={revisionTone}
+                      onChange={(event) => setRevisionTone(event.target.value)}
+                    />
+                    <select
+                      className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-900 dark:focus:ring-blue-500/15"
+                      value={targetLength}
+                      onChange={(event) => setTargetLength(event.target.value as "SHORT" | "MEDIUM" | "LONG")}
+                    >
+                      <option value="SHORT">Short</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="LONG">Long</option>
+                    </select>
+                  </div>
+                  <div className="grid gap-2 text-sm text-gray-600 dark:text-zinc-400 sm:grid-cols-3">
+                    <label className="flex items-center gap-2">
+                      <input checked={preserveTitle} type="checkbox" onChange={(event) => setPreserveTitle(event.target.checked)} />
+                      Preserve title
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input checked={preserveTags} type="checkbox" onChange={(event) => setPreserveTags(event.target.checked)} />
+                      Preserve tags
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        checked={markReviewReadyAfterRevision}
+                        type="checkbox"
+                        onChange={(event) => setMarkReviewReadyAfterRevision(event.target.checked)}
+                      />
+                      Review ready
+                    </label>
+                  </div>
+                  {revisionJobQuery.data ? (
+                    <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-600 dark:bg-zinc-900 dark:text-zinc-300">
+                      Revision job: {revisionJobQuery.data.status.toLowerCase()}
+                    </p>
+                  ) : null}
+                </div>
               </section>
             ) : null}
 

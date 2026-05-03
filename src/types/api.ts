@@ -74,6 +74,16 @@ export type BlogPostQualityReview = {
   modelName: string;
 };
 
+export type BlogPostRevisionPayload = {
+  revisionInstruction: string;
+  additionalMemo?: string | null;
+  tone?: string | null;
+  targetLength?: "SHORT" | "MEDIUM" | "LONG" | null;
+  preserveTitle?: boolean | null;
+  preserveTags?: boolean | null;
+  markReviewReady?: boolean | null;
+};
+
 export type AiJobStatus = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
 
 export type AiJob = {
