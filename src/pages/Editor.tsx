@@ -1197,6 +1197,47 @@ export default function Editor() {
                         ) : null}
                       </div>
                     ) : null}
+                    {((qualityReviewMutation.data.naverTrendFeedback?.length ?? 0) > 0 ||
+                      (qualityReviewMutation.data.naverTrendTitlePatterns?.length ?? 0) > 0 ||
+                      (qualityReviewMutation.data.naverTrendStructurePatterns?.length ?? 0) > 0) ? (
+                      <div className="rounded-lg border border-cyan-100 bg-cyan-50/70 p-3 dark:border-cyan-500/20 dark:bg-cyan-500/10">
+                        <h3 className="mb-2 text-sm font-bold text-cyan-950 dark:text-cyan-100">상위 글 비교</h3>
+                        <p className="mb-3 text-xs leading-5 text-cyan-900/80 dark:text-cyan-100/80">
+                          네이버 검색 API 상위 결과를 참고한 근사 피드백입니다. 조회수 기반 인기글 순위가 아니라 검색 정확도/날짜순 결과입니다.
+                        </p>
+                        {qualityReviewMutation.data.naverTrendFeedback?.length > 0 ? (
+                          <ul className="mb-3 space-y-1 text-sm leading-6 text-cyan-950 dark:text-cyan-100">
+                            {qualityReviewMutation.data.naverTrendFeedback.map((feedback, index) => (
+                              <li key={`${feedback}-${index}`}>{feedback}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        {qualityReviewMutation.data.naverTrendTitlePatterns?.length > 0 ? (
+                          <div className="mb-3">
+                            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-cyan-900 dark:text-cyan-200">
+                              제목 패턴
+                            </p>
+                            <ul className="space-y-1 text-sm leading-6 text-cyan-950 dark:text-cyan-100">
+                              {qualityReviewMutation.data.naverTrendTitlePatterns.map((pattern, index) => (
+                                <li key={`${pattern}-${index}`}>{pattern}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                        {qualityReviewMutation.data.naverTrendStructurePatterns?.length > 0 ? (
+                          <div>
+                            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-cyan-900 dark:text-cyan-200">
+                              구조 패턴
+                            </p>
+                            <ul className="space-y-1 text-sm leading-6 text-cyan-950 dark:text-cyan-100">
+                              {qualityReviewMutation.data.naverTrendStructurePatterns.map((pattern, index) => (
+                                <li key={`${pattern}-${index}`}>{pattern}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                     {qualityReviewMutation.data.revisionInstruction ? (
                       <div>
                         <div className="mb-2 flex items-center justify-between gap-3">

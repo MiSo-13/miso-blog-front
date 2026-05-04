@@ -284,7 +284,8 @@ export default function GeneralDraft() {
         <div className="flex gap-3">
           <BookOpen className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-300" size={20} />
           <p className="text-sm leading-6 text-blue-900 dark:text-blue-100">
-            활성화된 일반 레퍼런스 URL과 이전 저장 글의 문체 흐름이 AI 초안 생성에 함께 참고됩니다.
+            활성화된 일반 레퍼런스 URL과 이전 저장 글의 문체 흐름이 AI 초안 생성에 함께 참고됩니다. 장소, 주소, 키워드,
+            카테고리는 네이버 상위 글 비교 검색어를 만드는 데도 사용됩니다.
           </p>
         </div>
       </section>

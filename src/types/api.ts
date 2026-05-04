@@ -166,6 +166,9 @@ export type BlogPostQualityReview = {
   naverBlogFeedback: string[];
   naverBlogTitleSuggestions: string[];
   naverBlogStructureSuggestions: string[];
+  naverTrendFeedback: string[];
+  naverTrendTitlePatterns: string[];
+  naverTrendStructurePatterns: string[];
   revisionInstruction: string;
   rawResponse: string;
   modelName: string;
