@@ -161,6 +161,10 @@ export default function Editor() {
     githubTargetTestResult?.success === true &&
     selectedGithubTargetId !== null &&
     githubTargetTestResult.targetId === selectedGithubTargetId;
+  const isGithubTargetPublishReady =
+    isGithubTargetTested &&
+    githubTargetTestResult?.branchExists === true &&
+    githubTargetTestResult?.jekyllReady === true;
 
   useEffect(() => {
     if (!blogPostQuery.data) {
@@ -369,7 +373,7 @@ export default function Editor() {
     blogPostId !== null &&
     currentStatus === "APPROVED" &&
     selectedGithubTargetId !== null &&
-    isGithubTargetTested;
+    isGithubTargetPublishReady;
   const canExportVelog = blogPostId !== null && (currentStatus === "APPROVED" || currentStatus === "PUBLISHED");
   const githubPublishBlockedReason =
     blogPostId === null
@@ -378,11 +382,15 @@ export default function Editor() {
         ? "GitHub Pages 발행은 승인됨 상태에서만 사용할 수 있습니다."
         : githubTargets.length === 0
           ? "설정 화면에서 활성 GitHub Pages 발행 대상을 먼저 만들어 주세요."
-          : selectedGithubTargetId === null
-            ? "GitHub Pages 발행 대상을 선택해 주세요."
-            : !isGithubTargetTested
-              ? "발행 전 GitHub Pages 연결 테스트를 성공시켜 주세요."
-              : null;
+            : selectedGithubTargetId === null
+              ? "GitHub Pages 발행 대상을 선택해 주세요."
+              : !isGithubTargetTested
+                ? "발행 전 GitHub Pages 연결 테스트를 성공시켜 주세요."
+                : githubTargetTestResult?.branchExists === false
+                  ? "대상 브랜치가 없습니다. 설정 화면에서 Jekyll 초기화를 먼저 실행해 주세요."
+                  : githubTargetTestResult?.jekyllReady === false
+                    ? "Jekyll 기본 파일이 없습니다. 설정 화면에서 Jekyll 초기화를 먼저 실행해 주세요."
+                    : null;
   const velogExportBlockedReason =
     blogPostId === null
       ? "저장된 글에서만 내보낼 수 있습니다."
@@ -849,9 +857,11 @@ export default function Editor() {
                           {githubTargetTestMutation.isPending ? "테스트 중" : "테스트"}
                         </button>
                         <p className="text-xs leading-relaxed text-gray-500 dark:text-zinc-500">
-                          {isGithubTargetTested
+                          {isGithubTargetPublishReady
                             ? `연결 확인됨 · ${formatDateTime(githubTargetTestResult?.checkedAt)}`
-                            : "GitHub Pages 발행 전 연결 테스트가 필요합니다."}
+                            : isGithubTargetTested
+                              ? "연결은 확인했지만 Jekyll 초기화가 필요합니다."
+                              : "GitHub Pages 발행 전 연결 테스트가 필요합니다."}
                         </p>
                       </div>
                       {githubTargetTestMutation.isError ? (
@@ -862,6 +872,33 @@ export default function Editor() {
                       {githubTargetTestResult && !githubTargetTestResult.success ? (
                         <p className="rounded-lg bg-white px-3 py-2 text-sm text-gray-500 dark:bg-zinc-950 dark:text-zinc-400">
                           {githubTargetTestResult.message || "연결 테스트가 완료되지 않았습니다."}
+                        </p>
+                      ) : null}
+                      {githubTargetTestResult ? (
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          <span
+                            className={
+                              githubTargetTestResult.branchExists
+                                ? "rounded-full bg-emerald-50 px-2.5 py-1 font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                                : "rounded-full bg-amber-50 px-2.5 py-1 font-bold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                            }
+                          >
+                            {githubTargetTestResult.branchExists ? "브랜치 확인" : "브랜치 없음"}
+                          </span>
+                          <span
+                            className={
+                              githubTargetTestResult.jekyllReady
+                                ? "rounded-full bg-emerald-50 px-2.5 py-1 font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                                : "rounded-full bg-amber-50 px-2.5 py-1 font-bold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                            }
+                          >
+                            {githubTargetTestResult.jekyllReady ? "Jekyll 준비됨" : "Jekyll 초기화 필요"}
+                          </span>
+                        </div>
+                      ) : null}
+                      {githubTargetTestResult?.warnings.length ? (
+                        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+                          {githubTargetTestResult.warnings.join(", ")}
                         </p>
                       ) : null}
                     </div>

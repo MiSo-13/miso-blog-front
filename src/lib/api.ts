@@ -46,6 +46,8 @@ import type {
   GitHubBranchOption,
   GitHubPagesConnectionTest,
   GitHubRepositoryOption,
+  JekyllScaffoldPayload,
+  JekyllScaffoldResult,
   PublishStrategy,
   PublishTarget,
   UpdateBlogReferenceUrlPayload,
@@ -312,6 +314,9 @@ function successTitle(method: string, url: string) {
   if (method === "POST" && /\/api\/publish-targets\/\d+\/test-github-pages$/.test(url)) {
     return "GitHub Pages 연결을 확인했습니다.";
   }
+  if (method === "POST" && /\/api\/publish-targets\/\d+\/github-pages\/jekyll-scaffold$/.test(url)) {
+    return "Jekyll 기본 구조를 준비했습니다.";
+  }
 
   return method === "POST" ? "요청을 완료했습니다." : "변경 사항을 저장했습니다.";
 }
@@ -517,6 +522,8 @@ export const api = {
     unwrap<PublishTarget>(http.patch(`/api/publish-targets/${targetId}`, payload)),
   testGithubPagesTarget: (targetId: number) =>
     unwrap<GitHubPagesConnectionTest>(http.post(`/api/publish-targets/${targetId}/test-github-pages`)),
+  scaffoldJekyllSite: (targetId: number, payload: JekyllScaffoldPayload) =>
+    unwrap<JekyllScaffoldResult>(http.post(`/api/publish-targets/${targetId}/github-pages/jekyll-scaffold`, payload)),
   createDefaultPublishTargets: () =>
     unwrap<PublishTarget[]>(http.post("/api/publish-targets/defaults")),
   openAiSummary: () => unwrap<OpenAiSummary>(http.get("/api/admin/openai/summary")),

@@ -1,10 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Github, Globe2, Loader2, PlusCircle, Save, TestTube2 } from "lucide-react";
+import { ExternalLink, Github, Globe2, Hammer, Loader2, PlusCircle, Save, TestTube2 } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { formatDateTime } from "../lib/format";
-import type { CreatePublishTargetPayload, GitHubPagesConnectionTest, PublishTarget, UpdatePublishTargetPayload } from "../types/api";
+import type {
+  CreatePublishTargetPayload,
+  GitHubPagesConnectionTest,
+  JekyllScaffoldPayload,
+  JekyllScaffoldResult,
+  PublishTarget,
+  UpdatePublishTargetPayload,
+} from "../types/api";
 
 const channelIcon = {
   GITHUB_PAGES: Github,
@@ -26,6 +33,15 @@ type CreateTargetForm = TargetForm & {
   channel: PublishTarget["channel"];
 };
 
+type JekyllScaffoldForm = {
+  siteTitle: string;
+  siteDescription: string;
+  authorName: string;
+  baseUrl: string;
+  forceOverwrite: boolean;
+  commitMessage: string;
+};
+
 const emptyCreateForm: CreateTargetForm = {
   channel: "GITHUB_PAGES",
   role: "PRIMARY",
@@ -37,6 +53,28 @@ const emptyCreateForm: CreateTargetForm = {
   customDomain: "",
   active: true,
 };
+
+function toJekyllForm(target: PublishTarget): JekyllScaffoldForm {
+  return {
+    siteTitle: target.name || "MiSo Tech Blog",
+    siteDescription: "개발하며 배운 점을 기록하는 기술 블로그입니다.",
+    authorName: "MiSo",
+    baseUrl: target.baseUrl ?? "",
+    forceOverwrite: false,
+    commitMessage: "Initialize Jekyll tech blog",
+  };
+}
+
+function toJekyllPayload(form: JekyllScaffoldForm): JekyllScaffoldPayload {
+  return {
+    siteTitle: form.siteTitle.trim() || null,
+    siteDescription: form.siteDescription.trim() || null,
+    authorName: form.authorName.trim() || null,
+    baseUrl: form.baseUrl.trim() || null,
+    forceOverwrite: form.forceOverwrite,
+    commitMessage: form.commitMessage.trim() || null,
+  };
+}
 
 function toForm(target: PublishTarget): TargetForm {
   return {
@@ -364,10 +402,16 @@ function PublishTargetCard({
   const queryClient = useQueryClient();
   const [form, setForm] = useState<TargetForm>(() => toForm(target));
   const [testResult, setTestResult] = useState<GitHubPagesConnectionTest | null>(null);
+  const [jekyllForm, setJekyllForm] = useState<JekyllScaffoldForm>(() => toJekyllForm(target));
+  const [showJekyllForm, setShowJekyllForm] = useState(false);
+  const [jekyllResult, setJekyllResult] = useState<JekyllScaffoldResult | null>(null);
   const Icon = channelIcon[target.channel];
 
   useEffect(() => {
     setForm(toForm(target));
+    setJekyllForm(toJekyllForm(target));
+    setShowJekyllForm(false);
+    setJekyllResult(null);
     setTestResult(null);
   }, [target]);
 
@@ -391,8 +435,22 @@ function PublishTargetCard({
     onSuccess: (result) => setTestResult(result),
   });
 
+  const jekyllMutation = useMutation({
+    mutationFn: (payload: JekyllScaffoldPayload) => api.scaffoldJekyllSite(target.id, payload),
+    onSuccess: (result) => {
+      setJekyllResult(result);
+      queryClient.invalidateQueries({ queryKey: ["publish-targets"] });
+      queryClient.invalidateQueries({ queryKey: ["publish-strategy"] });
+      testMutation.mutate();
+    },
+  });
+
   const updateField = (field: keyof TargetForm, value: string | boolean) => {
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const updateJekyllField = (field: keyof JekyllScaffoldForm, value: string | boolean) => {
+    setJekyllForm((current) => ({ ...current, [field]: value }));
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -402,6 +460,16 @@ function PublishTargetCard({
     }
     updateMutation.mutate(toPayload(form));
   };
+
+  const handleJekyllSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (jekyllMutation.isPending) {
+      return;
+    }
+    jekyllMutation.mutate(toJekyllPayload(jekyllForm));
+  };
+
+  const jekyllReady = testResult?.success === true && testResult.branchExists && testResult.jekyllReady;
 
   return (
     <section className="rounded-lg border border-gray-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
@@ -525,16 +593,28 @@ function PublishTargetCard({
           </label>
           <div className="flex flex-wrap gap-2">
             {target.channel === "GITHUB_PAGES" ? (
-              <button
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                disabled={testMutation.isPending}
-                title="GitHub Pages 연결 테스트"
-                type="button"
-                onClick={() => testMutation.mutate()}
-              >
-                {testMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <TestTube2 size={16} />}
-                테스트
-              </button>
+              <>
+                <button
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  disabled={testMutation.isPending || jekyllMutation.isPending}
+                  title="GitHub Pages 연결 테스트"
+                  type="button"
+                  onClick={() => testMutation.mutate()}
+                >
+                  {testMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <TestTube2 size={16} />}
+                  테스트
+                </button>
+                <button
+                  className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/15"
+                  disabled={jekyllMutation.isPending}
+                  title="Jekyll 초기화 설정"
+                  type="button"
+                  onClick={() => setShowJekyllForm((current) => !current)}
+                >
+                  <Hammer size={16} />
+                  Jekyll
+                </button>
+              </>
             ) : null}
             <button
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
@@ -552,18 +632,142 @@ function PublishTargetCard({
       {testResult ? (
         <div
           className={
-            testResult.success
+            jekyllReady
               ? "mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200"
               : "mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200"
           }
         >
           <p className="font-semibold">{testResult.message}</p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <span className="rounded-full bg-white/70 px-2.5 py-1 font-bold dark:bg-zinc-950/70">
+              {testResult.branchExists ? "브랜치 확인" : "브랜치 없음"}
+            </span>
+            <span className="rounded-full bg-white/70 px-2.5 py-1 font-bold dark:bg-zinc-950/70">
+              {testResult.jekyllReady ? "Jekyll 준비됨" : "Jekyll 초기화 필요"}
+            </span>
+          </div>
           {testResult.warnings.length > 0 ? <p className="mt-1 text-xs">{testResult.warnings.join(", ")}</p> : null}
           <p className="mt-2 text-xs opacity-80">확인일 {formatDateTime(testResult.checkedAt)}</p>
         </div>
       ) : null}
 
-      {updateMutation.isError || testMutation.isError ? (
+      {target.channel === "GITHUB_PAGES" && showJekyllForm ? (
+        <form
+          className="mt-4 grid gap-3 rounded-lg border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-500/20 dark:bg-blue-500/10"
+          onSubmit={handleJekyllSubmit}
+        >
+          <div>
+            <h3 className="text-sm font-bold text-gray-950 dark:text-white">Jekyll 사이트 초기화</h3>
+            <p className="mt-1 text-xs leading-5 text-gray-600 dark:text-zinc-400">
+              기본 Jekyll 파일을 GitHub Pages 저장소에 commit합니다. 기존 커스터마이징이 있으면 덮어쓰기를 끄고 실행하세요.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">사이트 제목</span>
+              <input
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+                value={jekyllForm.siteTitle}
+                onChange={(event) => updateJekyllField("siteTitle", event.target.value)}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">작성자</span>
+              <input
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+                value={jekyllForm.authorName}
+                onChange={(event) => updateJekyllField("authorName", event.target.value)}
+              />
+            </label>
+          </div>
+          <label className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">사이트 설명</span>
+            <input
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+              value={jekyllForm.siteDescription}
+              onChange={(event) => updateJekyllField("siteDescription", event.target.value)}
+            />
+          </label>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">공개 URL</span>
+              <input
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+                placeholder="비우면 서버 설정으로 추론"
+                value={jekyllForm.baseUrl}
+                onChange={(event) => updateJekyllField("baseUrl", event.target.value)}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">커밋 메시지</span>
+              <input
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+                value={jekyllForm.commitMessage}
+                onChange={(event) => updateJekyllField("commitMessage", event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400">
+              <input
+                checked={jekyllForm.forceOverwrite}
+                type="checkbox"
+                onChange={(event) => updateJekyllField("forceOverwrite", event.target.checked)}
+              />
+              기존 파일 덮어쓰기
+            </label>
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={jekyllMutation.isPending}
+              title="Jekyll 초기화 실행"
+              type="submit"
+            >
+              {jekyllMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Hammer size={16} />}
+              {jekyllMutation.isPending ? "초기화 중" : "초기화"}
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      {jekyllResult ? (
+        <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
+          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+            <div>
+              <p className="font-semibold">{jekyllResult.repositoryFullName}</p>
+              <p className="text-xs opacity-80">
+                {jekyllResult.branchName} · {jekyllResult.publicBaseUrl} · {formatDateTime(jekyllResult.seededAt)}
+              </p>
+            </div>
+            {jekyllResult.commitUrl ? (
+              <a
+                className="inline-flex items-center gap-1 text-xs font-bold underline"
+                href={jekyllResult.commitUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <ExternalLink size={13} />
+                커밋
+              </a>
+            ) : null}
+          </div>
+          <div className="mt-3 grid gap-1">
+            {jekyllResult.files.map((file) => (
+              <p className="flex flex-wrap items-center gap-2 text-xs" key={file.filePath}>
+                <span className="font-bold">{file.action}</span>
+                {file.contentUrl ? (
+                  <a className="underline" href={file.contentUrl} rel="noreferrer" target="_blank">
+                    {file.filePath}
+                  </a>
+                ) : (
+                  <span>{file.filePath}</span>
+                )}
+              </p>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {updateMutation.isError || testMutation.isError || jekyllMutation.isError ? (
         <p className="mt-4 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-500 dark:bg-zinc-950 dark:text-zinc-400">
           요청을 완료하지 못했습니다. 설정값과 서버 상태를 확인해 주세요.
         </p>

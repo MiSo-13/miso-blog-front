@@ -494,6 +494,8 @@ export type GitHubPagesConnectionTest = {
   branchName: string;
   contentRootPath: string;
   success: boolean;
+  branchExists: boolean;
+  jekyllReady: boolean;
   checkedItems: string[];
   warnings: string[];
   repositoryUrl: string;
@@ -501,6 +503,33 @@ export type GitHubPagesConnectionTest = {
   contentRootUrl: string;
   message: string;
   checkedAt: string;
+};
+
+export type JekyllScaffoldPayload = {
+  siteTitle?: string | null;
+  siteDescription?: string | null;
+  authorName?: string | null;
+  baseUrl?: string | null;
+  forceOverwrite?: boolean | null;
+  commitMessage?: string | null;
+};
+
+export type JekyllScaffoldFile = {
+  filePath: string;
+  action: "CREATED" | "UPDATED" | "SKIPPED" | string;
+  contentUrl: string | null;
+};
+
+export type JekyllScaffoldResult = {
+  targetId: number;
+  repositoryFullName: string;
+  branchName: string;
+  publicBaseUrl: string;
+  forceOverwrite: boolean;
+  files: JekyllScaffoldFile[];
+  commitSha: string | null;
+  commitUrl: string | null;
+  seededAt: string;
 };
 
 export type PublishStrategy = {
