@@ -1,5 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, BookOpen, CheckCircle2, Edit3, FileText, FolderOpen, ListChecks, PlusCircle, Save, Sparkles, Trash2, Wand2, X } from "lucide-react";
+import {
+  BarChart3,
+  BookOpen,
+  CheckCircle2,
+  DownloadCloud,
+  Edit3,
+  ExternalLink,
+  FileText,
+  FolderOpen,
+  Github,
+  ListChecks,
+  Loader2,
+  PlusCircle,
+  Save,
+  Sparkles,
+  Trash2,
+  Wand2,
+  X,
+} from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -10,6 +28,7 @@ import type {
   AnalysisReport,
   AnalyzeLocalRepositoryPayload,
   BlogWritingMode,
+  CloneGithubLocalRepositoryPayload,
   CreateLocalRepositoryPayload,
   LocalRepositoryDefault,
   LocalRepository,
@@ -147,6 +166,8 @@ export default function Projects() {
         </section>
       ) : null}
 
+      <GithubCloneSection />
+
       <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mb-5 flex items-center gap-3">
           <PlusCircle className="text-blue-600" size={22} />
@@ -219,6 +240,199 @@ export default function Projects() {
         </section>
       )}
     </div>
+  );
+}
+
+function GithubCloneSection() {
+  const queryClient = useQueryClient();
+  const [repositoryFullName, setRepositoryFullName] = useState("");
+  const [branchName, setBranchName] = useState("");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [refreshExisting, setRefreshExisting] = useState(true);
+
+  const repositoriesQuery = useQuery({
+    queryKey: ["local-repository-github-options"],
+    queryFn: api.localRepositoryGithubOptions,
+    retry: false,
+  });
+  const branchesQuery = useQuery({
+    queryKey: ["local-repository-github-branch-options", repositoryFullName],
+    queryFn: () => api.localRepositoryGithubBranchOptions(repositoryFullName),
+    enabled: repositoryFullName.trim().length > 0,
+    retry: false,
+  });
+  const cloneMutation = useMutation({
+    mutationFn: (payload: CloneGithubLocalRepositoryPayload) => api.cloneGithubLocalRepository(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["local-repositories"] });
+      queryClient.invalidateQueries({ queryKey: ["local-repository-defaults"] });
+    },
+  });
+
+  const githubRepositories = repositoriesQuery.isSuccess ? repositoriesQuery.data : [];
+  const branches = branchesQuery.isSuccess ? branchesQuery.data : [];
+  const selectedRepository = githubRepositories.find((repository) => repository.fullName === repositoryFullName) ?? null;
+  const canClone = repositoryFullName.trim().length > 0 && !cloneMutation.isPending;
+
+  useEffect(() => {
+    if (!selectedRepository) {
+      return;
+    }
+
+    setBranchName((current) => current || selectedRepository.defaultBranch || "main");
+    setName((current) => current || selectedRepository.name);
+  }, [selectedRepository]);
+
+  const selectRepository = (fullName: string) => {
+    const repository = githubRepositories.find((item) => item.fullName === fullName) ?? null;
+    setRepositoryFullName(fullName);
+    setBranchName(repository?.defaultBranch ?? "");
+    setName(repository?.name ?? "");
+    setDescription(repository ? "GitHub에서 clone한 개발 블로그 분석 대상" : "");
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canClone) {
+      return;
+    }
+
+    cloneMutation.mutate({
+      repositoryFullName: repositoryFullName.trim(),
+      branchName: branchName.trim() || null,
+      name: name.trim() || null,
+      description: description.trim() || null,
+      refreshExisting,
+    });
+  };
+
+  return (
+    <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="mb-5 flex items-start gap-3">
+        <Github className="mt-0.5 text-blue-600" size={22} />
+        <div>
+          <h2 className="text-xl font-bold text-gray-950 dark:text-white">GitHub 저장소 clone</h2>
+          <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-zinc-400">
+            Docker 배포처럼 서버가 내 PC 경로를 직접 읽을 수 없을 때, GitHub 저장소를 서버 내부 로컬 분석 대상으로 준비합니다.
+          </p>
+        </div>
+      </div>
+
+      <form className="grid gap-4" onSubmit={handleSubmit}>
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+          <label className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">GitHub 저장소</span>
+            <select
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+              disabled={repositoriesQuery.isLoading}
+              value={repositoryFullName}
+              onChange={(event) => selectRepository(event.target.value)}
+            >
+              <option value="">{repositoriesQuery.isLoading ? "저장소 불러오는 중" : "저장소 선택"}</option>
+              {githubRepositories.map((repository) => (
+                <option key={repository.fullName} value={repository.fullName}>
+                  {repository.fullName}
+                  {repository.privateRepository ? " · private" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">브랜치</span>
+            <select
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+              disabled={!repositoryFullName || branchesQuery.isLoading}
+              value={branchName}
+              onChange={(event) => setBranchName(event.target.value)}
+            >
+              {branchName ? <option value={branchName}>{branchName}</option> : <option value="">브랜치 선택</option>}
+              {branches
+                .filter((branch) => branch.name !== branchName)
+                .map((branch) => (
+                  <option key={branch.name} value={branch.name}>
+                    {branch.name}
+                    {branch.protectedBranch ? " · protected" : ""}
+                  </option>
+                ))}
+            </select>
+          </label>
+        </div>
+
+        {selectedRepository ? (
+          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-zinc-500">
+            <span className="rounded-full bg-gray-50 px-2.5 py-1 ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-800">
+              기본 {selectedRepository.defaultBranch || "main"}
+            </span>
+            <span className="rounded-full bg-gray-50 px-2.5 py-1 ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-800">
+              {selectedRepository.privateRepository ? "private" : "public"}
+            </span>
+            <span className="rounded-full bg-gray-50 px-2.5 py-1 ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-800">
+              수정 {formatDateTime(selectedRepository.updatedAt)}
+            </span>
+            {selectedRepository.htmlUrl ? (
+              <a
+                className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700 transition hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300"
+                href={selectedRepository.htmlUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <ExternalLink size={13} />
+                GitHub
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">분석 이름</span>
+            <input
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">설명</span>
+            <input
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:ring-blue-500/15"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </label>
+        </div>
+
+        <div className="flex flex-col justify-between gap-4 border-t border-gray-100 pt-4 dark:border-zinc-800 sm:flex-row sm:items-center">
+          <div className="grid gap-2">
+            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400">
+              <input checked={refreshExisting} type="checkbox" onChange={(event) => setRefreshExisting(event.target.checked)} />
+              이미 clone된 저장소는 최신화
+            </label>
+            {branchesQuery.isError ? (
+              <p className="text-xs leading-5 text-amber-700 dark:text-amber-300">
+                브랜치 목록을 불러오지 못했습니다. 기본 브랜치 이름으로 clone을 시도할 수 있습니다.
+              </p>
+            ) : null}
+          </div>
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!canClone}
+            title="GitHub 저장소 clone"
+            type="submit"
+          >
+            {cloneMutation.isPending ? <Loader2 className="animate-spin" size={17} /> : <DownloadCloud size={17} />}
+            {cloneMutation.isPending ? "준비 중" : "clone"}
+          </button>
+        </div>
+
+        {repositoriesQuery.isError ? (
+          <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-500 dark:bg-zinc-950 dark:text-zinc-400">
+            GitHub 저장소 목록을 불러오지 못했습니다. 서버의 GitHub token 권한을 확인해 주세요.
+          </p>
+        ) : null}
+      </form>
+    </section>
   );
 }
 

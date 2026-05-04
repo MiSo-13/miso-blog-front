@@ -19,6 +19,7 @@ import type {
   BlogPostVersionDiff,
   BlogReferenceType,
   BlogReferenceUrl,
+  CloneGithubLocalRepositoryPayload,
   CreatePublishTargetPayload,
   CreateBlogReferenceUrlPayload,
   CreateBlogPostPayload,
@@ -254,6 +255,9 @@ function successTitle(method: string, url: string) {
   if (method === "POST" && /\/api\/local-repositories$/.test(url)) {
     return "로컬 저장소를 등록했습니다.";
   }
+  if (method === "POST" && /\/api\/local-repositories\/github\/clone$/.test(url)) {
+    return "GitHub 저장소를 로컬 분석 대상으로 준비했습니다.";
+  }
   if (method === "PATCH" && /\/api\/local-repositories\/\d+$/.test(url)) {
     return "로컬 저장소 설정을 저장했습니다.";
   }
@@ -451,6 +455,14 @@ export const api = {
   retryJob: (jobId: number) => unwrap<AiJob>(http.post(`/api/ai-jobs/${jobId}/retry`)),
   localRepositoryDefaults: () =>
     unwrap<LocalRepositoryDefault[]>(http.get("/api/local-repositories/defaults")),
+  localRepositoryGithubOptions: () =>
+    unwrap<GitHubRepositoryOption[]>(http.get("/api/local-repositories/github/repositories")),
+  localRepositoryGithubBranchOptions: (repositoryFullName: string) =>
+    unwrap<GitHubBranchOption[]>(
+      http.get("/api/local-repositories/github/branches", { params: { repositoryFullName } }),
+    ),
+  cloneGithubLocalRepository: (payload: CloneGithubLocalRepositoryPayload) =>
+    unwrap<LocalRepository>(http.post("/api/local-repositories/github/clone", payload)),
   localRepositories: () => unwrap<LocalRepository[]>(http.get("/api/local-repositories")),
   localRepository: (repositoryId: number) =>
     unwrap<LocalRepository>(http.get(`/api/local-repositories/${repositoryId}`)),

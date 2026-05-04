@@ -161,6 +161,8 @@ export type BlogPostQualityReview = {
   unsupportedClaims: string[];
   aiLikePhrases: string[];
   monetizationSuggestions: string[];
+  referenceFeedback: string[];
+  referenceSentenceSuggestions: string[];
   revisionInstruction: string;
   rawResponse: string;
   modelName: string;
@@ -308,6 +310,14 @@ export type CreateLocalRepositoryPayload = {
   defaultBranch?: string | null;
   description?: string | null;
   active?: boolean | null;
+};
+
+export type CloneGithubLocalRepositoryPayload = {
+  repositoryFullName: string;
+  branchName?: string | null;
+  name?: string | null;
+  description?: string | null;
+  refreshExisting?: boolean | null;
 };
 
 export type UpdateLocalRepositoryPayload = CreateLocalRepositoryPayload;
