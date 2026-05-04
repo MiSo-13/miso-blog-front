@@ -1097,6 +1097,69 @@ export default function Editor() {
                         </ul>
                       </div>
                     ) : null}
+                    {((qualityReviewMutation.data.naverBlogFeedback?.length ?? 0) > 0 ||
+                      (qualityReviewMutation.data.naverBlogTitleSuggestions?.length ?? 0) > 0 ||
+                      (qualityReviewMutation.data.naverBlogStructureSuggestions?.length ?? 0) > 0) ? (
+                      <div className="rounded-lg border border-emerald-100 bg-emerald-50/70 p-3 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+                        <h3 className="mb-2 text-sm font-bold text-emerald-900 dark:text-emerald-100">
+                          네이버 블로그 최적화
+                        </h3>
+                        {qualityReviewMutation.data.naverBlogFeedback?.length > 0 ? (
+                          <ul className="mb-3 space-y-1 text-sm leading-6 text-emerald-900 dark:text-emerald-100">
+                            {qualityReviewMutation.data.naverBlogFeedback.map((feedback, index) => (
+                              <li key={`${feedback}-${index}`}>{feedback}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        {qualityReviewMutation.data.naverBlogTitleSuggestions?.length > 0 ? (
+                          <div className="mb-3">
+                            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-200">
+                              제목 후보
+                            </p>
+                            <div className="grid gap-2">
+                              {qualityReviewMutation.data.naverBlogTitleSuggestions.map((suggestion, index) => (
+                                <div
+                                  className="flex flex-col gap-2 rounded-lg bg-white p-2 text-sm text-gray-700 dark:bg-zinc-950 dark:text-zinc-200 sm:flex-row sm:items-center sm:justify-between"
+                                  key={`${suggestion}-${index}`}
+                                >
+                                  <span className="leading-6">{suggestion}</span>
+                                  <div className="flex shrink-0 gap-2">
+                                    <button
+                                      className="rounded bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-500/20"
+                                      title="제목 후보 사용"
+                                      type="button"
+                                      onClick={() => setTitle(suggestion)}
+                                    >
+                                      사용
+                                    </button>
+                                    <button
+                                      className="rounded bg-white px-2 py-1 text-xs font-bold text-gray-600 ring-1 ring-gray-200 transition hover:bg-gray-50 dark:bg-zinc-900 dark:text-zinc-300 dark:ring-zinc-800"
+                                      title="제목 후보 복사"
+                                      type="button"
+                                      onClick={() => handleCopy(`naver-title-${index}`, suggestion)}
+                                    >
+                                      {copiedLabel === `naver-title-${index}` ? "복사됨" : "복사"}
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                        {qualityReviewMutation.data.naverBlogStructureSuggestions?.length > 0 ? (
+                          <div>
+                            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-200">
+                              본문 구조
+                            </p>
+                            <ul className="space-y-1 text-sm leading-6 text-emerald-900 dark:text-emerald-100">
+                              {qualityReviewMutation.data.naverBlogStructureSuggestions.map((suggestion, index) => (
+                                <li key={`${suggestion}-${index}`}>{suggestion}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                     {qualityReviewMutation.data.revisionInstruction ? (
                       <div>
                         <div className="mb-2 flex items-center justify-between gap-3">

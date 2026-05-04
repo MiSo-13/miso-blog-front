@@ -33,13 +33,13 @@ type GeneralBlogFormat = "STANDARD" | "NAVER";
 const formatOptions: Array<{ value: GeneralBlogFormat; label: string; description: string }> = [
   {
     value: "STANDARD",
-    label: "기본 블로그",
-    description: "주제와 메모에 맞춰 자연스러운 일반 후기형 글로 작성합니다.",
+    label: "일반 후기",
+    description: "서버 기본 네이버 기준은 유지하되, 별도 양식 지시를 덜어 자연스러운 후기형 글로 작성합니다.",
   },
   {
     value: "NAVER",
     label: "네이버 블로그",
-    description: "짧은 문단, 사진 중심 흐름, 친근한 후기체로 작성합니다.",
+    description: "검색 스니펫형 요약, 짧은 모바일 문단, 사진 중심 흐름, 자연스러운 키워드를 우선합니다.",
   },
 ];
 
@@ -86,7 +86,7 @@ export default function GeneralDraft() {
   const [requiredPhrasesText, setRequiredPhrasesText] = useState("");
   const [memo, setMemo] = useState("");
   const [keywordsText, setKeywordsText] = useState("");
-  const [writingFormat, setWritingFormat] = useState<GeneralBlogFormat>("STANDARD");
+  const [writingFormat, setWritingFormat] = useState<GeneralBlogFormat>("NAVER");
   const [photos, setPhotos] = useState<GeneralBlogPhotoPayload[]>([{ ...emptyPhoto }]);
   const [photoFiles, setPhotoFiles] = useState<Record<number, File | null>>({});
   const [batchFiles, setBatchFiles] = useState<File[]>([]);
@@ -276,7 +276,7 @@ export default function GeneralDraft() {
         <p className="mb-2 text-sm font-semibold text-blue-600 dark:text-blue-400">일반 블로그</p>
         <h1 className="mb-2 text-3xl font-bold text-gray-950 dark:text-white">AI 초안 생성</h1>
         <p className="max-w-2xl text-gray-600 dark:text-zinc-400">
-          메모, 키워드, 사진 설명을 바탕으로 일반 블로그 초안을 생성합니다.
+          메모, 키워드, 사진 설명을 바탕으로 네이버 블로그에 붙여넣기 좋은 일반 블로그 초안을 생성합니다.
         </p>
       </section>
 
@@ -335,7 +335,7 @@ export default function GeneralDraft() {
             <div className="mb-3">
               <h3 className="text-sm font-bold text-gray-950 dark:text-white">작성 양식</h3>
               <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-zinc-400">
-                같은 API 요청 안에서 선택한 양식의 작성 지시를 함께 전달합니다.
+                일반 블로그는 기본적으로 네이버 블로그 게시를 기준으로 작성됩니다.
               </p>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
