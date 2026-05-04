@@ -1077,6 +1077,26 @@ export default function Editor() {
                         </ul>
                       </div>
                     ) : null}
+                    {(qualityReviewMutation.data.referenceFeedback?.length ?? 0) > 0 ? (
+                      <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-3 dark:border-blue-500/20 dark:bg-blue-500/10">
+                        <h3 className="mb-2 text-sm font-bold text-blue-900 dark:text-blue-100">레퍼런스 반영 피드백</h3>
+                        <ul className="space-y-1 text-sm leading-6 text-blue-900 dark:text-blue-100">
+                          {qualityReviewMutation.data.referenceFeedback.map((feedback, index) => (
+                            <li key={`${feedback}-${index}`}>{feedback}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {(qualityReviewMutation.data.referenceSentenceSuggestions?.length ?? 0) > 0 ? (
+                      <div>
+                        <h3 className="mb-2 text-sm font-bold text-gray-950 dark:text-white">문장 구조 참고</h3>
+                        <ul className="space-y-1 text-sm leading-6 text-gray-600 dark:text-zinc-400">
+                          {qualityReviewMutation.data.referenceSentenceSuggestions.map((suggestion, index) => (
+                            <li key={`${suggestion}-${index}`}>{suggestion}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
                     {qualityReviewMutation.data.revisionInstruction ? (
                       <div>
                         <div className="mb-2 flex items-center justify-between gap-3">

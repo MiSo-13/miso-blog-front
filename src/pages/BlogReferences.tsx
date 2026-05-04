@@ -173,7 +173,7 @@ export default function BlogReferences() {
       </section>
 
       <Notice
-        description="서버는 레퍼런스 URL의 본문을 직접 읽지 않습니다. 설명에 어떤 점을 참고해야 하는지 적어두면 AI가 더 정확하게 활용합니다."
+        description="서버가 활성 레퍼런스 URL의 페이지 일부를 읽어 AI 작업에 전달합니다. 설명에 어떤 점을 참고해야 하는지 적어두면 접속 실패나 본문 추출 한계가 있어도 더 정확하게 활용됩니다."
         icon={BookOpen}
         tone="blue"
         title="설명 메모가 핵심입니다"
